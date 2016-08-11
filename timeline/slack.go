@@ -1,4 +1,4 @@
-package slack
+package timeline
 
 import (
 	"encoding/json"
@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+
+	"github.com/pkg/errors"
 
 	"golang.org/x/net/websocket"
 )
@@ -22,34 +24,34 @@ type rtmStartResponse struct {
 	Error string `json:"error"`
 }
 
-type SlackMessage struct {
+type slackMessage struct {
 	Type      string `json:"type"`
 	UserID    string `json:"user"`
 	Text      string `json:"text"`
 	ChannelID string `json:"channel"`
 }
 
-type UserListResponse struct {
+type userListResponse struct {
 	OK    bool   `json:"ok"`
-	User  User   `json:"user"`
+	User  user   `json:"user"`
 	Error string `json:"error"`
 }
 
-type User struct {
+type user struct {
 	ID      string  `json:"id"`
 	Name    string  `json:"name"`
-	Profile Profile `json:"profile"`
+	Profile profile `json:"profile"`
 }
 
-type Profile struct {
+type profile struct {
 	ImageURL string `json:"image_48"`
 }
 
-type SlackClient struct {
+type slackClient struct {
 	Token string
 }
 
-func (cli *SlackClient) connectToRTM() (*websocket.Conn, error) {
+func (cli *slackClient) connectToRTM() (*websocket.Conn, error) {
 	v := url.Values{
 		"token": {cli.Token},
 	}
@@ -63,7 +65,10 @@ func (cli *SlackClient) connectToRTM() (*websocket.Conn, error) {
 		return nil, e
 	}
 	res := rtmStartResponse{}
-	json.Unmarshal(byteArray, &res)
+	e = json.Unmarshal(byteArray, &res)
+	if e != nil {
+		return nil, e
+	}
 	if !res.OK {
 		return nil, fmt.Errorf(res.Error)
 	}
@@ -74,7 +79,7 @@ func (cli *SlackClient) connectToRTM() (*websocket.Conn, error) {
 	return ws, nil
 }
 
-func (cli *SlackClient) Polling(messageChan chan []byte, errorChan chan error) {
+func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan error) {
 	ws, e := cli.connectToRTM()
 	if e != nil {
 		errorChan <- e
@@ -83,26 +88,29 @@ func (cli *SlackClient) Polling(messageChan chan []byte, errorChan chan error) {
 	defer ws.Close()
 	for {
 		var msg = make([]byte, 1024)
-		if n, e := ws.Read(msg); e != nil {
+		n, e := ws.Read(msg)
+		if e != nil {
 			errorChan <- e
 		} else {
-			messageChan <- msg[:n]
+			message := slackMessage{}
+			err := json.Unmarshal(msg[:n], &message)
+			if err != nil {
+				errorChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n])))
+			} else {
+				messageChan <- &message
+			}
 		}
 	}
 }
 
-func (cli *SlackClient) PostMessage(channelID, text, userID string) ([]byte, error) {
-	u, e := cli.getUserName(userID)
-	if e != nil {
-		return nil, e
-	}
+func (cli *slackClient) postMessage(channelID, text, userName, iconURL string) ([]byte, error) {
 	res, e := http.PostForm(slackAPIEndpoint+"chat.postMessage", url.Values{
 		"token":      {cli.Token},
 		"channel":    {channelID},
 		"text":       {text},
-		"username":   {u.Name},
+		"username":   {userName},
 		"as_user":    {"false"},
-		"icon_url":   {u.Profile.ImageURL},
+		"icon_url":   {iconURL},
 		"link_names": {"0"},
 	})
 	if e != nil {
@@ -116,7 +124,7 @@ func (cli *SlackClient) PostMessage(channelID, text, userID string) ([]byte, err
 	return byteArray, nil
 }
 
-func (cli *SlackClient) getUserName(userID string) (*User, error) {
+func (cli *slackClient) getUser(userID string) (*user, error) {
 	res, e := http.PostForm(slackAPIEndpoint+"users.info", url.Values{
 		"token": {cli.Token},
 		"user":  {userID},
@@ -129,8 +137,11 @@ func (cli *SlackClient) getUserName(userID string) (*User, error) {
 	if e != nil {
 		return nil, e
 	}
-	r := UserListResponse{}
-	json.Unmarshal(b, &r)
+	r := userListResponse{}
+	e = json.Unmarshal(b, &r)
+	if e != nil {
+		return nil, e
+	}
 	if !r.OK {
 		return nil, fmt.Errorf(r.Error)
 	}
