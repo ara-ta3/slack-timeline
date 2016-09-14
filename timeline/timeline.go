@@ -1,14 +1,16 @@
 package timeline
 
 type TimelineService struct {
-	SlackClient       slackClient
-	TimelineChannelID string
+	SlackClient         slackClient
+	TimelineChannelID   string
+	BlackListChannelIDs []string
 }
 
-func NewTimelineService(slackAPIToken, timelineChannelID string) TimelineService {
+func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string) TimelineService {
 	return TimelineService{
-		SlackClient:       slackClient{Token: slackAPIToken},
-		TimelineChannelID: timelineChannelID,
+		SlackClient:         slackClient{Token: slackAPIToken},
+		TimelineChannelID:   timelineChannelID,
+		BlackListChannelIDs: blackListChannelIDs,
 	}
 }
 
@@ -37,7 +39,19 @@ func (service *TimelineService) Run() error {
 }
 
 func (service *TimelineService) isTargetMessage(m *slackMessage) bool {
-	return m.Type == "message" && m.ChannelID != service.TimelineChannelID && isPublic(m.ChannelID)
+	return m.Type == "message" &&
+		m.ChannelID != service.TimelineChannelID &&
+		isPublic(m.ChannelID) &&
+		!contains(service.BlackListChannelIDs, m.ChannelID)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
 
 func (service *TimelineService) postMessage(m *slackMessage) error {
