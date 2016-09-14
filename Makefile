@@ -6,7 +6,7 @@ install:
 	go get golang.org/x/net/websocket
 	go get github.com/stretchr/testify/assert
 
-build: test
+build: 
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build
 
 build_for_linux:
