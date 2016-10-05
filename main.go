@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 
 	"./timeline"
 )
@@ -15,10 +16,12 @@ func main() {
 		log.Fatalln(e)
 	}
 
+	logger := log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
 	service := timeline.NewTimelineService(
 		config.SlackAPIToken,
 		config.TimelineChannelID,
 		config.BlackListChannelIDs,
+		logger,
 	)
 	e := service.Run()
 	if e != nil {

@@ -1,9 +1,12 @@
 package timeline
 
+import "log"
+
 type TimelineService struct {
 	SlackClient         slackClient
 	TimelineChannelID   string
 	BlackListChannelIDs []string
+	logger              log.Logger
 }
 
 func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string) TimelineService {
@@ -23,6 +26,7 @@ func (service *TimelineService) Run() error {
 		select {
 		case msg := <-messageChan:
 			if !service.isTargetMessage(msg) {
+				service.logger.Println(msg)
 				continue
 			}
 			e := service.postMessage(msg)
