@@ -11,7 +11,7 @@ import (
 func main() {
 	filePath := flag.String("c", "config.json", "file path to config.json")
 	flag.Parse()
-	config, e := ReadConfig(filePath)
+	config, e := ReadConfig(*filePath)
 	if e != nil {
 		log.Fatalln(e)
 	}
@@ -21,10 +21,10 @@ func main() {
 		config.SlackAPIToken,
 		config.TimelineChannelID,
 		config.BlackListChannelIDs,
-		logger,
+		*logger,
 	)
-	e := service.Run()
-	if e != nil {
-		log.Fatalf("%+v", e)
+	err := service.Run()
+	if err != nil {
+		log.Fatalf("%+v", err)
 	}
 }

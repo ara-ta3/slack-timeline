@@ -9,11 +9,12 @@ type TimelineService struct {
 	logger              log.Logger
 }
 
-func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string) TimelineService {
+func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string, logger log.Logger) TimelineService {
 	return TimelineService{
 		SlackClient:         slackClient{Token: slackAPIToken},
 		TimelineChannelID:   timelineChannelID,
 		BlackListChannelIDs: blackListChannelIDs,
+		logger:              logger,
 	}
 }
 
