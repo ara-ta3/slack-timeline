@@ -29,16 +29,21 @@ func (service *TimelineService) Run() error {
 	errorChan := make(chan error)
 
 	go service.SlackClient.polling(messageChan, errorChan)
+	isFirst := false
 	for {
 		select {
 		case msg := <-messageChan:
+			if msg.Type == "hello" {
+				isFirst = true
+			}
 			if !service.isTargetMessage(msg) {
 				service.logger.Println(msg)
 				continue
 			}
 			key := msg.ChannelID + "-" + msg.TimeStamp
 			_, err := service.db.Get([]byte(key), nil)
-			if err == nil {
+			if err == nil || isFirst {
+				isFirst = false
 				continue
 			}
 			e := service.postMessage(msg)
