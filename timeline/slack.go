@@ -94,8 +94,8 @@ func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan e
 		} else {
 			message := slackMessage{}
 			err := json.Unmarshal(msg[:n], &message)
-			if err != nil {
-				errorChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n])))
+			if err == nil {
+				fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
 			} else {
 				messageChan <- &message
 			}
