@@ -25,11 +25,11 @@ type rtmStartResponse struct {
 }
 
 type slackMessage struct {
-	Type      string  `json:"type"`
-	UserID    string  `json:"user"`
-	Text      string  `json:"text"`
-	ChannelID string  `json:"channel"`
-	TimeStamp float64 `json:"ts"`
+	Type      string `json:"type"`
+	UserID    string `json:"user"`
+	Text      string `json:"text"`
+	ChannelID string `json:"channel"`
+	TimeStamp string `json:"ts"`
 }
 
 type userListResponse struct {
@@ -95,7 +95,7 @@ func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan e
 		} else {
 			message := slackMessage{}
 			err := json.Unmarshal(msg[:n], &message)
-			if err == nil {
+			if err != nil {
 				fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
 			} else {
 				messageChan <- &message

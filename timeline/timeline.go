@@ -10,6 +10,7 @@ type TimelineService struct {
 	SlackClient         slackClient
 	TimelineChannelID   string
 	BlackListChannelIDs []string
+	db                  leveldb.DB
 	logger              log.Logger
 }
 
@@ -18,7 +19,7 @@ func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChanne
 		SlackClient:         slackClient{Token: slackAPIToken},
 		TimelineChannelID:   timelineChannelID,
 		BlackListChannelIDs: blackListChannelIDs,
-		db:                  leveldb.DB,
+		db:                  db,
 		logger:              logger,
 	}
 }
@@ -36,13 +37,13 @@ func (service *TimelineService) Run() error {
 				continue
 			}
 			key := msg.ChannelID + "-" + msg.TimeStamp
-			_, err := service.db.Get([]byte(key))
-			if err != nil {
+			_, err := service.db.Get([]byte(key), nil)
+			if err == nil {
 				continue
 			}
 			e := service.postMessage(msg)
 			if e != nil {
-				service.db.Put([]byte(key), []byte(key))
+				service.db.Put([]byte(key), []byte(key), nil)
 				return e
 			}
 		case e := <-errorChan:

@@ -30,7 +30,7 @@ func main() {
 		config.SlackAPIToken,
 		config.TimelineChannelID,
 		config.BlackListChannelIDs,
-		db,
+		*db,
 		*logger,
 	)
 	err := service.Run()
