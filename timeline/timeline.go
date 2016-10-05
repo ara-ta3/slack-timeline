@@ -1,6 +1,10 @@
 package timeline
 
-import "log"
+import (
+	"log"
+
+	"github.com/syndtr/goleveldb/leveldb"
+)
 
 type TimelineService struct {
 	SlackClient         slackClient
@@ -9,11 +13,12 @@ type TimelineService struct {
 	logger              log.Logger
 }
 
-func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string, logger log.Logger) TimelineService {
+func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string, db leveldb.DB, logger log.Logger) TimelineService {
 	return TimelineService{
 		SlackClient:         slackClient{Token: slackAPIToken},
 		TimelineChannelID:   timelineChannelID,
 		BlackListChannelIDs: blackListChannelIDs,
+		db:                  leveldb.DB,
 		logger:              logger,
 	}
 }
@@ -30,8 +35,14 @@ func (service *TimelineService) Run() error {
 				service.logger.Println(msg)
 				continue
 			}
+			key := msg.ChannelID + "-" + msg.TimeStamp
+			_, err := service.db.Get([]byte(key))
+			if err != nil {
+				continue
+			}
 			e := service.postMessage(msg)
 			if e != nil {
+				service.db.Put([]byte(key), []byte(key))
 				return e
 			}
 		case e := <-errorChan:

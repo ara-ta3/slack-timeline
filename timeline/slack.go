@@ -25,10 +25,11 @@ type rtmStartResponse struct {
 }
 
 type slackMessage struct {
-	Type      string `json:"type"`
-	UserID    string `json:"user"`
-	Text      string `json:"text"`
-	ChannelID string `json:"channel"`
+	Type      string  `json:"type"`
+	UserID    string  `json:"user"`
+	Text      string  `json:"text"`
+	ChannelID string  `json:"channel"`
+	TimeStamp float64 `json:"ts"`
 }
 
 type userListResponse struct {

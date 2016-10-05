@@ -5,6 +5,7 @@ install:
 	go get github.com/pkg/errors
 	go get golang.org/x/net/websocket
 	go get github.com/stretchr/testify/assert
+	go get github.com/syndtr/goleveldb/leveldb
 
 build: 
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build
