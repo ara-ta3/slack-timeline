@@ -3,20 +3,22 @@ package main
 import (
 	"flag"
 	"log"
-	"os"
-	"strings"
 
 	"./timeline"
 )
 
 func main() {
-	blacklists := flag.String("blacklists", "", "comma separated black list channel ids")
+	filePath := flag.String("c", "config.json", "file path to config.json")
 	flag.Parse()
+	config, e := ReadConfig(filePath)
+	if e != nil {
+		log.Fatalln(e)
+	}
 
 	service := timeline.NewTimelineService(
-		os.Getenv("SLACK_TOKEN"),
-		os.Getenv("SLACK_TIMELINE_CHANNEL_ID"),
-		strings.Split(*blacklists, ","),
+		config.SlackAPIToken,
+		config.TimelineChannelID,
+		config.BlackListChannelIDs,
 	)
 	e := service.Run()
 	if e != nil {
