@@ -1,7 +1,7 @@
 GOOS=
 GOARCH=
-goos_opt="GOOS=$(GOOS)"
-goarch_opt="GOARCH=$(GOARCH)"
+goos_opt=GOOS=$(GOOS)
+goarch_opt=GOARCH=$(GOARCH)
 out=slacktimeline
 out_opt="-o $(out)"
 
