@@ -103,7 +103,7 @@ func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan e
 			message := slackMessage{}
 			err := json.Unmarshal(msg[:n], &message)
 			if err != nil {
-				fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
+				errorChan <- fmt.Errorf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
 			} else if message.SubType == "" {
 				messageChan <- &message
 			} else if message.SubType == "message_deleted" {
