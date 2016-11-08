@@ -24,12 +24,18 @@ type rtmStartResponse struct {
 	Error string `json:"error"`
 }
 
+type deletedEvent struct {
+	ChannelID string       `json:"channel"`
+	Message   slackMessage `json:"previous_message"`
+}
+
 type slackMessage struct {
 	Type      string `json:"type"`
 	UserID    string `json:"user"`
 	Text      string `json:"text"`
 	ChannelID string `json:"channel"`
 	TimeStamp string `json:"ts"`
+	SubType   string `json:"subtype"`
 }
 
 type userListResponse struct {
@@ -80,7 +86,7 @@ func (cli *slackClient) connectToRTM() (*websocket.Conn, error) {
 	return ws, nil
 }
 
-func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan error) {
+func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan error, deletedMessageChan chan *slackMessage) {
 	ws, e := cli.connectToRTM()
 	if e != nil {
 		errorChan <- e
@@ -88,17 +94,27 @@ func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan e
 	}
 	defer ws.Close()
 	for {
-		var msg = make([]byte, 1024)
+		var msg = make([]byte, 4096)
 		n, e := ws.Read(msg)
 		if e != nil {
 			errorChan <- e
 		} else {
+			fmt.Println(string(msg[:n]))
 			message := slackMessage{}
 			err := json.Unmarshal(msg[:n], &message)
 			if err != nil {
 				fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
-			} else {
+			} else if message.SubType == "" {
 				messageChan <- &message
+			} else if message.SubType == "message_deleted" {
+				d := deletedEvent{}
+				e := json.Unmarshal(msg[:n], &d)
+				if e != nil {
+					fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal to deleted event. json: '%s'", string(msg[:n]))))
+				} else {
+					d.Message.ChannelID = d.ChannelID
+					deletedMessageChan <- &d.Message
+				}
 			}
 		}
 	}
@@ -148,4 +164,21 @@ func (cli *slackClient) getUser(userID string) (*user, error) {
 	}
 	u := r.User
 	return &u, nil
+}
+
+func (cli *slackClient) deleteMessage(ts, channel string) ([]byte, error) {
+	res, e := http.PostForm(slackAPIEndpoint+"chat.delete", url.Values{
+		"token":   {cli.Token},
+		"ts":      {ts},
+		"channel": {channel},
+	})
+	if e != nil {
+		return nil, e
+	}
+	defer res.Body.Close()
+	byteArray, e := ioutil.ReadAll(res.Body)
+	if e != nil {
+		return nil, e
+	}
+	return byteArray, nil
 }

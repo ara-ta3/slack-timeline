@@ -1,3 +1,10 @@
+GOOS=
+GOARCH=
+goos_opt="GOOS=$(GOOS)"
+goarch_opt="GOARCH=$(GOARCH)"
+out=slacktimeline
+out_opt="-o $(out)"
+
 help:
 	@cat Makefile
 
@@ -8,7 +15,7 @@ install:
 	go get github.com/syndtr/goleveldb/leveldb
 
 build: 
-	GOOS=$(GOOS) GOARCH=$(GOARCH) go build
+	 $(goos_opt) $(goarch_opt) go build $(out_opt)
 
 build_for_linux:
 	$(MAKE) build GOOS=linux GOARCH=amd64
