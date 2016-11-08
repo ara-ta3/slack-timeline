@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -14,6 +15,8 @@ func main() {
 	filePath := flag.String("c", "config.json", "file path to config.json")
 	dbPath := flag.String("db", "db", "path of db for deleting message")
 	flag.Parse()
+	fmt.Printf("filepath: %s\n", *filePath)
+	fmt.Printf("dbpath: %s\n", *dbPath)
 	config, e := ReadConfig(*filePath)
 	if e != nil {
 		log.Fatalln(e)
