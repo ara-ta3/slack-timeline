@@ -1,6 +1,8 @@
 package timeline
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -27,8 +29,9 @@ func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChanne
 func (service *TimelineService) Run() error {
 	messageChan := make(chan *slackMessage)
 	errorChan := make(chan error)
+	deletedMessageChan := make(chan *slackMessage)
 
-	go service.SlackClient.polling(messageChan, errorChan)
+	go service.SlackClient.polling(messageChan, errorChan, deletedMessageChan)
 	isFirst := false
 	for {
 		select {
@@ -41,18 +44,34 @@ func (service *TimelineService) Run() error {
 				continue
 			}
 			key := msg.ChannelID + "-" + msg.TimeStamp
+			fmt.Println(key)
 			_, err := service.db.Get([]byte(key), nil)
 			if err == nil || isFirst {
 				isFirst = false
 				continue
 			}
-			e := service.postMessage(msg)
+			m, e := service.postMessage(msg)
 			if e != nil {
-				service.db.Put([]byte(key), []byte(key), nil)
-				return e
+				service.logger.Println(msg)
+				service.logger.Println(e)
 			}
+			service.db.Put([]byte(key), m, nil)
 		case e := <-errorChan:
 			return e
+		case d := <-deletedMessageChan:
+			key := d.ChannelID + "-" + d.TimeStamp
+			data, err := service.db.Get([]byte(key), nil)
+			if err != nil {
+				service.logger.Println(d)
+				service.logger.Println(err)
+			}
+			m := slackMessage{}
+			err = json.Unmarshal(data, &m)
+			if err != nil {
+				service.logger.Println(d)
+				service.logger.Println(err)
+			}
+			service.deleteMessage(&m)
 		default:
 			break
 		}
@@ -76,17 +95,20 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func (service *TimelineService) postMessage(m *slackMessage) error {
+func (service *TimelineService) postMessage(m *slackMessage) ([]byte, error) {
 	// TODO cache?
 	u, e := service.SlackClient.getUser(m.UserID)
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	t := m.Text + " (at <#" + m.ChannelID + ">)"
 	// TODO about response
-	_, e = service.SlackClient.postMessage(service.TimelineChannelID, t, u.Name, u.Profile.ImageURL)
-	return e
+	return service.SlackClient.postMessage(service.TimelineChannelID, t, u.Name, u.Profile.ImageURL)
+}
+
+func (service *TimelineService) deleteMessage(m *slackMessage) ([]byte, error) {
+	return service.SlackClient.deleteMessage(m.TimeStamp, m.ChannelID)
 }
 
 func isPublic(channelID string) bool {
