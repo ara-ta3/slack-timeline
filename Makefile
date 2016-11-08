@@ -18,7 +18,7 @@ build:
 	 $(goos_opt) $(goarch_opt) go build $(out_opt)
 
 build_for_linux:
-	$(MAKE) build GOOS=linux GOARCH=amd64
+	$(MAKE) build GOOS=linux GOARCH=amd64 out_opt=""
 
 test:
 	go test -v ./timeline/...
