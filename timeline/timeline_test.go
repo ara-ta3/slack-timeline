@@ -6,16 +6,18 @@ import (
 	"os"
 	"testing"
 
+	"../slack"
+
 	"github.com/stretchr/testify/assert"
 )
 
-var emptyUserRepository = UserRepositoryOnMemory{data: map[string]user{}}
+var emptyUserRepository = UserRepositoryOnMemory{data: map[string]slack.User{}}
 
-var emptyMessageRepository = MessageRepositoryOnMemory{data: map[string]slackMessage{}}
+var emptyMessageRepository = MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
 
 func TestIsTargetReturnFalseWhenReceivedMessageWithTheSameChannelID(t *testing.T) {
 	s := NewServiceForTest(emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Type:      "message",
 		ChannelID: "CtimelineChannelID",
 	}
@@ -24,7 +26,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageWithTheSameChannelID(t *testing.T
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T) {
 	s := NewServiceForTest(emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Type:      "message",
 		ChannelID: "Phogehoge",
 	}
@@ -33,7 +35,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing.T) {
 	s := NewServiceForTest(emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Type:      "message",
 		ChannelID: "Caaa",
 	}
@@ -42,7 +44,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing
 
 func TestIsTargetReturnTrue(t *testing.T) {
 	s := NewServiceForTest(emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Type:      "message",
 		ChannelID: "Cccc",
 	}
@@ -51,41 +53,41 @@ func TestIsTargetReturnTrue(t *testing.T) {
 }
 
 type UserRepositoryOnMemory struct {
-	data map[string]user
+	data map[string]slack.User
 }
 
-func (r UserRepositoryOnMemory) Get(userID string) (user, error) {
+func (r UserRepositoryOnMemory) Get(userID string) (slack.User, error) {
 	u, found := r.data[userID]
 	if found {
 		return u, nil
 	}
-	return user{}, fmt.Errorf("not found")
+	return slack.User{}, fmt.Errorf("not found")
 }
 
 func (r UserRepositoryOnMemory) Clear() error {
-	r.data = map[string]user{}
+	r.data = map[string]slack.User{}
 	return nil
 }
 
 type MessageRepositoryOnMemory struct {
-	data map[string]slackMessage
+	data map[string]slack.SlackMessage
 }
 
-func (r MessageRepositoryOnMemory) FindMessageInTimeline(m slackMessage) (slackMessage, error) {
+func (r MessageRepositoryOnMemory) FindMessageInTimeline(m slack.SlackMessage) (slack.SlackMessage, error) {
 	// TODO ホントはm自体ではない
 	_, found := r.data[m.ToKey()]
 	if found {
 		return m, nil
 	}
-	return slackMessage{}, fmt.Errorf("not found")
+	return slack.SlackMessage{}, fmt.Errorf("not found")
 }
 
-func (r MessageRepositoryOnMemory) Put(u user, m slackMessage) error {
+func (r MessageRepositoryOnMemory) Put(u slack.User, m slack.SlackMessage) error {
 	r.data[m.ToKey()] = m
 	return nil
 }
 
-func (r MessageRepositoryOnMemory) Delete(m slackMessage) error {
+func (r MessageRepositoryOnMemory) Delete(m slack.SlackMessage) error {
 	delete(r.data, m.ToKey())
 	return nil
 }
@@ -93,7 +95,7 @@ func (r MessageRepositoryOnMemory) Delete(m slackMessage) error {
 func NewServiceForTest(userRepository UserRepository, messageRepository MessageRepository, t string, bs []string) TimelineService {
 	logger := log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
 	return TimelineService{
-		slackClient:         slackClient{},
+		SlackClient:         slack.SlackClient{},
 		UserRepository:      userRepository,
 		MessageRepository:   messageRepository,
 		TimelineChannelID:   t,
@@ -103,12 +105,12 @@ func NewServiceForTest(userRepository UserRepository, messageRepository MessageR
 }
 
 func TestTimelineServicePutMessage(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]user{
-		"userid": user{},
+	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
+		"userid": slack.User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
 	s := NewServiceForTest(userRepository, messageRepository, "timelineChannelID", nil)
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Raw:       "raw",
 		Type:      "message",
 		UserID:    "userid",
@@ -125,12 +127,12 @@ func TestTimelineServicePutMessage(t *testing.T) {
 }
 
 func TestTimelineServiceDeleteFromTimeline(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]user{
-		"userid": user{},
+	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
+		"userid": slack.User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
 	s := NewServiceForTest(userRepository, messageRepository, "timelineChannelID", nil)
-	m := slackMessage{
+	m := slack.SlackMessage{
 		Raw:       "raw",
 		Type:      "message",
 		UserID:    "userid",

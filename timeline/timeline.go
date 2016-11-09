@@ -3,11 +3,24 @@ package timeline
 import (
 	"log"
 
+	"../slack"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+type UserRepository interface {
+	Get(userID string) (slack.User, error)
+	Clear() error
+}
+
+type MessageRepository interface {
+	// TODO slack.SlackMessageじゃなくしたい
+	FindMessageInTimeline(m slack.SlackMessage) (slack.SlackMessage, error)
+	Put(u slack.User, m slack.SlackMessage) error
+	Delete(m slack.SlackMessage) error
+}
+
 type TimelineService struct {
-	slackClient         slackClient
+	SlackClient         slack.SlackClient
 	UserRepository      UserRepository
 	MessageRepository   MessageRepository
 	TimelineChannelID   string
@@ -16,11 +29,11 @@ type TimelineService struct {
 }
 
 func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string, db leveldb.DB, logger log.Logger) TimelineService {
-	s := slackClient{Token: slackAPIToken}
+	s := slack.SlackClient{Token: slackAPIToken}
 	return TimelineService{
-		slackClient:         s,
-		UserRepository:      NewUserRepository(s),
-		MessageRepository:   NewMessageRepository(timelineChannelID, s, db),
+		SlackClient:         s,
+		UserRepository:      slack.NewUserRepository(s),
+		MessageRepository:   slack.NewMessageRepository(timelineChannelID, s, db),
 		TimelineChannelID:   timelineChannelID,
 		BlackListChannelIDs: blackListChannelIDs,
 		logger:              logger,
@@ -28,12 +41,12 @@ func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChanne
 }
 
 func (service *TimelineService) Run() error {
-	messageChan := make(chan *slackMessage)
+	messageChan := make(chan *slack.SlackMessage)
 	errorChan := make(chan error)
 	warnChan := make(chan error)
-	deletedMessageChan := make(chan *slackMessage)
+	deletedMessageChan := make(chan *slack.SlackMessage)
 
-	go service.slackClient.polling(messageChan, deletedMessageChan, warnChan, errorChan)
+	go service.SlackClient.Polling(messageChan, deletedMessageChan, warnChan, errorChan)
 	for {
 		select {
 		case msg := <-messageChan:
@@ -59,7 +72,7 @@ func (service *TimelineService) Run() error {
 	return nil
 }
 
-func (service *TimelineService) PutToTimeline(m *slackMessage) error {
+func (service *TimelineService) PutToTimeline(m *slack.SlackMessage) error {
 	if !service.isTargetMessage(m) {
 		service.logger.Printf("%+v\n", m)
 		return nil
@@ -76,7 +89,7 @@ func (service *TimelineService) PutToTimeline(m *slackMessage) error {
 	return nil
 }
 
-func (service *TimelineService) DeleteFromTimeline(originMessage *slackMessage) error {
+func (service *TimelineService) DeleteFromTimeline(originMessage *slack.SlackMessage) error {
 	m, e := service.MessageRepository.FindMessageInTimeline(*originMessage)
 	if e != nil {
 		return e
@@ -88,7 +101,7 @@ func (service *TimelineService) DeleteFromTimeline(originMessage *slackMessage) 
 	return nil
 }
 
-func (service *TimelineService) isTargetMessage(m *slackMessage) bool {
+func (service *TimelineService) isTargetMessage(m *slack.SlackMessage) bool {
 	return m.Type == "message" &&
 		m.ChannelID != service.TimelineChannelID &&
 		isPublic(m.ChannelID) &&
