@@ -30,12 +30,17 @@ type deletedEvent struct {
 }
 
 type slackMessage struct {
+	Raw       string `json:"-"`
 	Type      string `json:"type"`
 	UserID    string `json:"user"`
 	Text      string `json:"text"`
 	ChannelID string `json:"channel"`
 	TimeStamp string `json:"ts"`
 	SubType   string `json:"subtype"`
+}
+
+func (m *slackMessage) ToKey() string {
+	return fmt.Sprintf("%s-%s", m.ChannelID, m.TimeStamp)
 }
 
 type userListResponse struct {
@@ -86,36 +91,55 @@ func (cli *slackClient) connectToRTM() (*websocket.Conn, error) {
 	return ws, nil
 }
 
-func (cli *slackClient) polling(messageChan chan *slackMessage, errorChan chan error, deletedMessageChan chan *slackMessage) {
+func receive(ws *websocket.Conn) ([]byte, error) {
+	var msg = make([]byte, 4096)
+	n, e := ws.Read(msg)
+	if e != nil {
+		return nil, e
+	}
+	return msg[:n], nil
+}
+
+func (cli *slackClient) polling(
+	messageChan, deletedMessageChan chan *slackMessage,
+	warnChan, errorChan chan error,
+) {
 	ws, e := cli.connectToRTM()
 	if e != nil {
 		errorChan <- e
 		return
 	}
 	defer ws.Close()
+	prev := []byte{}
 	for {
-		var msg = make([]byte, 4096)
-		n, e := ws.Read(msg)
+		received, e := receive(ws)
 		if e != nil {
 			errorChan <- e
-		} else {
-			fmt.Println(string(msg[:n]))
-			message := slackMessage{}
-			err := json.Unmarshal(msg[:n], &message)
-			if err != nil {
-				errorChan <- fmt.Errorf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", string(msg[:n]))))
-			} else if message.SubType == "" {
-				messageChan <- &message
-			} else if message.SubType == "message_deleted" {
-				d := deletedEvent{}
-				e := json.Unmarshal(msg[:n], &d)
-				if e != nil {
-					fmt.Printf("%+v\n", errors.Wrap(err, fmt.Sprintf("failed to unmarshal to deleted event. json: '%s'", string(msg[:n]))))
-				} else {
-					d.Message.ChannelID = d.ChannelID
-					deletedMessageChan <- &d.Message
-				}
+		}
+		msg := append(prev, received...)
+		message := slackMessage{}
+		err := json.Unmarshal(msg, &message)
+
+		if err != nil {
+			warnChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", msg))
+			prev = msg
+			continue
+		}
+		message.Raw = string(msg)
+		prev = []byte{}
+
+		switch message.SubType {
+		case "":
+			messageChan <- &message
+		case "message_deleted":
+			d := deletedEvent{}
+			e := json.Unmarshal([]byte(msg), &d)
+			if e != nil {
+				warnChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal to deleted event. json: '%s'", msg))
+				continue
 			}
+			d.Message.ChannelID = d.ChannelID
+			deletedMessageChan <- &d.Message
 		}
 	}
 }
