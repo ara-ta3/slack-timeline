@@ -6,9 +6,12 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
+	cache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 
+	"github.com/syndtr/goleveldb/leveldb"
 	"golang.org/x/net/websocket"
 )
 
@@ -205,4 +208,105 @@ func (cli *slackClient) deleteMessage(ts, channel string) ([]byte, error) {
 		return nil, e
 	}
 	return byteArray, nil
+}
+
+func NewMessageRepository(timelineChannelID string, s slackClient, db leveldb.DB) MessageRepositoryOnSlack {
+	return MessageRepositoryOnSlack{
+		timelineChannelID: timelineChannelID,
+		slackClient:       &s,
+		db:                &db,
+	}
+}
+
+type MessageRepository interface {
+	// TODO slackMessageじゃなくしたい
+	FindMessageInTimeline(m slackMessage) (slackMessage, error)
+	Put(u user, m slackMessage) error
+	Delete(m slackMessage) error
+}
+
+type MessageRepositoryOnSlack struct {
+	timelineChannelID string
+	slackClient       *slackClient
+	db                *leveldb.DB
+}
+
+func (r MessageRepositoryOnSlack) FindMessageInTimeline(message slackMessage) (slackMessage, error) {
+	key := message.ToKey()
+	data, err := r.db.Get([]byte(key), nil)
+	if err != nil {
+		return slackMessage{}, err
+	}
+	m := slackMessage{}
+	err = json.Unmarshal(data, &m)
+	if err != nil {
+		return slackMessage{}, err
+	}
+	return m, nil
+}
+
+func (r MessageRepositoryOnSlack) Put(u user, m slackMessage) error {
+	if r.alreadExists(m) {
+		return nil
+	}
+	t := m.Text + " (at <#" + m.ChannelID + "> )"
+	posted, e := r.slackClient.postMessage(r.timelineChannelID, t, u.Name, u.Profile.ImageURL)
+	if e != nil {
+		return e
+	}
+	key := m.ToKey()
+	r.db.Put([]byte(key), posted, nil)
+	return nil
+}
+
+func (r MessageRepositoryOnSlack) Delete(message slackMessage) error {
+	_, e := r.slackClient.deleteMessage(message.TimeStamp, message.ChannelID)
+	return e
+}
+
+func (r MessageRepositoryOnSlack) alreadExists(message slackMessage) bool {
+	key := message.ToKey()
+	_, err := r.db.Get([]byte(key), nil)
+	return err == nil
+}
+
+func NewUserRepository(s slackClient) UserRepositoryOnSlack {
+	c := cache.New(cache.NoExpiration, 30*time.Minute)
+	return UserRepositoryOnSlack{
+		s,
+		*c,
+	}
+}
+
+type UserRepository interface {
+	Get(userID string) (user, error)
+	Clear() error
+}
+
+type UserRepositoryOnSlack struct {
+	slackClient slackClient
+	cache       cache.Cache
+}
+
+func (r UserRepositoryOnSlack) Get(userID string) (user, error) {
+	u, found := r.cache.Get(userID)
+	ret, ok := u.(user)
+	if found && ok {
+		return ret, nil
+	}
+	r.cache.Delete(userID)
+
+	uu, err := r.slackClient.getUser(userID)
+
+	if err != nil {
+		return user{}, err
+	}
+
+	r.cache.Set(userID, uu, cache.NoExpiration)
+	return *uu, nil
+}
+
+func (r UserRepositoryOnSlack) Clear() error {
+	r.cache.Flush()
+	return nil
 }
