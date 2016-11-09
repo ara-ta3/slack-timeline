@@ -21,7 +21,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageWithTheSameChannelID(t *testing.T
 		Type:      "message",
 		ChannelID: "CtimelineChannelID",
 	}
-	assert.Equal(t, false, s.isTargetMessage(&m))
+	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
 }
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T) {
@@ -30,7 +30,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T
 		Type:      "message",
 		ChannelID: "Phogehoge",
 	}
-	assert.Equal(t, false, s.isTargetMessage(&m))
+	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
 }
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing.T) {
@@ -39,7 +39,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing
 		Type:      "message",
 		ChannelID: "Caaa",
 	}
-	assert.Equal(t, false, s.isTargetMessage(&m))
+	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
 }
 
 func TestIsTargetReturnTrue(t *testing.T) {
@@ -48,7 +48,7 @@ func TestIsTargetReturnTrue(t *testing.T) {
 		Type:      "message",
 		ChannelID: "Cccc",
 	}
-	assert.Equal(t, true, s.isTargetMessage(&m))
+	assert.Equal(t, true, s.MessageValidator.IsTargetMessage(&m))
 
 }
 
@@ -92,15 +92,23 @@ func (r MessageRepositoryOnMemory) Delete(m slack.SlackMessage) error {
 	return nil
 }
 
-func NewServiceForTest(userRepository UserRepository, messageRepository MessageRepository, t string, bs []string) TimelineService {
+func NewServiceForTest(
+	userRepository UserRepository,
+	messageRepository MessageRepository,
+	t string,
+	bs []string,
+) TimelineService {
 	logger := log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
-	return TimelineService{
-		SlackClient:         slack.SlackClient{},
-		UserRepository:      userRepository,
-		MessageRepository:   messageRepository,
+	v := MessageValidator{
 		TimelineChannelID:   t,
 		BlackListChannelIDs: bs,
-		logger:              *logger,
+	}
+	return TimelineService{
+		SlackClient:       slack.SlackClient{},
+		UserRepository:    userRepository,
+		MessageRepository: messageRepository,
+		MessageValidator:  v,
+		logger:            *logger,
 	}
 }
 

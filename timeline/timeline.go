@@ -20,23 +20,30 @@ type MessageRepository interface {
 }
 
 type TimelineService struct {
-	SlackClient         slack.SlackClient
-	UserRepository      UserRepository
-	MessageRepository   MessageRepository
-	TimelineChannelID   string
-	BlackListChannelIDs []string
-	logger              log.Logger
+	SlackClient       slack.SlackClient
+	UserRepository    UserRepository
+	MessageRepository MessageRepository
+	MessageValidator  MessageValidator
+	logger            log.Logger
 }
 
-func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChannelIDs []string, db leveldb.DB, logger log.Logger) TimelineService {
+func NewTimelineService(
+	slackAPIToken, timelineChannelID string,
+	blackListChannelIDs []string,
+	db leveldb.DB,
+	logger log.Logger,
+) TimelineService {
 	s := slack.SlackClient{Token: slackAPIToken}
-	return TimelineService{
-		SlackClient:         s,
-		UserRepository:      slack.NewUserRepository(s),
-		MessageRepository:   slack.NewMessageRepository(timelineChannelID, s, db),
+	v := MessageValidator{
 		TimelineChannelID:   timelineChannelID,
 		BlackListChannelIDs: blackListChannelIDs,
-		logger:              logger,
+	}
+	return TimelineService{
+		SlackClient:       s,
+		UserRepository:    slack.NewUserRepository(s),
+		MessageRepository: slack.NewMessageRepository(timelineChannelID, s, db),
+		MessageValidator:  v,
+		logger:            logger,
 	}
 }
 
@@ -73,7 +80,7 @@ func (service *TimelineService) Run() error {
 }
 
 func (service *TimelineService) PutToTimeline(m *slack.SlackMessage) error {
-	if !service.isTargetMessage(m) {
+	if !service.MessageValidator.IsTargetMessage(m) {
 		service.logger.Printf("%+v\n", m)
 		return nil
 	}
@@ -101,11 +108,16 @@ func (service *TimelineService) DeleteFromTimeline(originMessage *slack.SlackMes
 	return nil
 }
 
-func (service *TimelineService) isTargetMessage(m *slack.SlackMessage) bool {
+type MessageValidator struct {
+	TimelineChannelID   string
+	BlackListChannelIDs []string
+}
+
+func (v MessageValidator) IsTargetMessage(m *slack.SlackMessage) bool {
 	return m.Type == "message" &&
-		m.ChannelID != service.TimelineChannelID &&
+		m.ChannelID != v.TimelineChannelID &&
 		isPublic(m.ChannelID) &&
-		!contains(service.BlackListChannelIDs, m.ChannelID)
+		!contains(v.BlackListChannelIDs, m.ChannelID)
 }
 
 func contains(s []string, e string) bool {
