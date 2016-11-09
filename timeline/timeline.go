@@ -2,7 +2,6 @@ package timeline
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 
 	"github.com/syndtr/goleveldb/leveldb"
@@ -29,49 +28,49 @@ func NewTimelineService(slackAPIToken, timelineChannelID string, blackListChanne
 func (service *TimelineService) Run() error {
 	messageChan := make(chan *slackMessage)
 	errorChan := make(chan error)
+	warnChan := make(chan error)
 	deletedMessageChan := make(chan *slackMessage)
 
-	go service.SlackClient.polling(messageChan, errorChan, deletedMessageChan)
-	isFirst := false
+	go service.SlackClient.polling(messageChan, deletedMessageChan, warnChan, errorChan)
 	for {
 		select {
 		case msg := <-messageChan:
-			if msg.Type == "hello" {
-				isFirst = true
-			}
 			if !service.isTargetMessage(msg) {
-				service.logger.Println(msg)
+				service.logger.Printf("%+v\n", msg)
 				continue
 			}
-			key := msg.ChannelID + "-" + msg.TimeStamp
-			fmt.Println(key)
+			key := msg.ToKey()
 			_, err := service.db.Get([]byte(key), nil)
-			if err == nil || isFirst {
-				isFirst = false
+			if err == nil {
+				service.logger.Printf("%+v\n", err)
 				continue
 			}
 			m, e := service.postMessage(msg)
 			if e != nil {
-				service.logger.Println(msg)
-				service.logger.Println(e)
+				service.logger.Printf("%+v\n", msg)
+				service.logger.Printf("%+v\n", e)
 			}
 			service.db.Put([]byte(key), m, nil)
-		case e := <-errorChan:
-			return e
 		case d := <-deletedMessageChan:
-			key := d.ChannelID + "-" + d.TimeStamp
+			key := d.ToKey()
 			data, err := service.db.Get([]byte(key), nil)
 			if err != nil {
-				service.logger.Println(d)
-				service.logger.Println(err)
+				service.logger.Printf("%+v\n", d)
+				service.logger.Printf("%+v\n", err)
 			}
 			m := slackMessage{}
 			err = json.Unmarshal(data, &m)
 			if err != nil {
-				service.logger.Println(d)
-				service.logger.Println(err)
+				service.logger.Printf("%+v\n", d)
+				service.logger.Printf("%+v\n", data)
+				service.logger.Printf("%+v\n", err)
 			}
 			service.deleteMessage(&m)
+		case e := <-warnChan:
+			service.logger.Printf("%+v\n", e)
+		case e := <-errorChan:
+			return e
+
 		default:
 			break
 		}
@@ -102,8 +101,7 @@ func (service *TimelineService) postMessage(m *slackMessage) ([]byte, error) {
 		return nil, e
 	}
 
-	t := m.Text + " (at <#" + m.ChannelID + ">)"
-	// TODO about response
+	t := m.Text + " (at <#" + m.ChannelID + "> )"
 	return service.SlackClient.postMessage(service.TimelineChannelID, t, u.Name, u.Profile.ImageURL)
 }
 
