@@ -16,6 +16,7 @@ install:
 	go get golang.org/x/net/websocket
 	go get github.com/stretchr/testify/assert
 	go get github.com/syndtr/goleveldb/leveldb
+	go get github.com/patrickmn/go-cache
 
 build: 
 	 $(goos_opt) $(goarch_opt) go build $(out_opt)
