@@ -117,9 +117,7 @@ func (cli *slackClient) polling(
 			errorChan <- e
 		}
 		msg := append(prev, received...)
-		message := slackMessage{
-			Raw: string(msg),
-		}
+		message := slackMessage{}
 		err := json.Unmarshal(msg, &message)
 
 		if err != nil {
@@ -127,6 +125,7 @@ func (cli *slackClient) polling(
 			prev = msg
 			continue
 		}
+		message.Raw = string(msg)
 		prev = []byte{}
 
 		switch message.SubType {
