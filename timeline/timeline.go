@@ -2,29 +2,26 @@ package timeline
 
 import (
 	"log"
-
-	"../slack"
 )
 
 type TimelineWorker interface {
 	Polling(
-		messageChan, deletedMessageChan chan *slack.SlackMessage,
+		messageChan, deletedMessageChan chan *Message,
 		warnChan, errorChan chan error,
 		endChan chan bool,
 	)
 }
 
 type UserRepository interface {
-	Get(userID string) (slack.User, error)
-	GetAll() ([]slack.User, error)
+	Get(userID string) (User, error)
+	GetAll() ([]User, error)
 	Clear() error
 }
 
 type MessageRepository interface {
-	// TODO slack.SlackMessageじゃなくしたい
-	FindMessageInTimeline(m slack.SlackMessage) (slack.SlackMessage, error)
-	Put(u slack.User, m slack.SlackMessage) error
-	Delete(m slack.SlackMessage) error
+	FindMessageInTimeline(m Message) (Message, error)
+	Put(u User, m Message) error
+	Delete(m Message) error
 }
 
 type TimelineService struct {
@@ -59,8 +56,8 @@ func NewTimelineService(
 }
 
 func (s *TimelineService) Run() error {
-	messageChan := make(chan *slack.SlackMessage)
-	deletedMessageChan := make(chan *slack.SlackMessage)
+	messageChan := make(chan *Message)
+	deletedMessageChan := make(chan *Message)
 	errorChan := make(chan error)
 	warnChan := make(chan error)
 	endChan := make(chan bool)
@@ -98,7 +95,7 @@ func (s *TimelineService) Run() error {
 	return nil
 }
 
-func (service *TimelineService) PutToTimeline(m *slack.SlackMessage) error {
+func (service *TimelineService) PutToTimeline(m *Message) error {
 	if !service.MessageValidator.IsTargetMessage(m) {
 		service.logger.Printf("%+v\n", m)
 		return nil
@@ -117,7 +114,7 @@ func (service *TimelineService) PutToTimeline(m *slack.SlackMessage) error {
 	return nil
 }
 
-func (service *TimelineService) DeleteFromTimeline(originMessage *slack.SlackMessage) error {
+func (service *TimelineService) DeleteFromTimeline(originMessage *Message) error {
 	m, e := service.MessageRepository.FindMessageInTimeline(*originMessage)
 	if e != nil {
 		return e
@@ -134,9 +131,8 @@ type MessageValidator struct {
 	BlackListChannelIDs []string
 }
 
-func (v MessageValidator) IsTargetMessage(m *slack.SlackMessage) bool {
-	return m.Type == "message" &&
-		m.ChannelID != v.TimelineChannelID &&
+func (v MessageValidator) IsTargetMessage(m *Message) bool {
+	return m.ChannelID != v.TimelineChannelID &&
 		isPublic(m.ChannelID) &&
 		!contains(v.BlackListChannelIDs, m.ChannelID)
 }

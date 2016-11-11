@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"../timeline"
 	"github.com/pkg/errors"
 
 	"golang.org/x/net/websocket"
@@ -39,8 +40,8 @@ type SlackMessage struct {
 	SubType   string `json:"subtype"`
 }
 
-func (m *SlackMessage) ToKey() string {
-	return fmt.Sprintf("%s-%s", m.ChannelID, m.TimeStamp)
+func (m *SlackMessage) ToInternal() timeline.Message {
+	return timeline.NewMessage(m.Text, m.UserID, m.ChannelID, m.TimeStamp)
 }
 
 type userListResponse struct {
@@ -59,6 +60,10 @@ type User struct {
 	ID      string  `json:"id"`
 	Name    string  `json:"name"`
 	Profile profile `json:"profile"`
+}
+
+func (u User) ToInternal() timeline.User {
+	return timeline.NewUser(u.ID, u.Name, u.Profile.ImageURL)
 }
 
 type profile struct {
@@ -107,7 +112,7 @@ func receive(ws *websocket.Conn) ([]byte, error) {
 }
 
 func (cli *SlackClient) Polling(
-	messageChan, deletedMessageChan chan *SlackMessage,
+	messageChan, deletedMessageChan chan *timeline.Message,
 	warnChan, errorChan chan error,
 ) {
 	ws, e := cli.connectToRTM()
@@ -131,12 +136,17 @@ func (cli *SlackClient) Polling(
 			prev = msg
 			continue
 		}
+		if message.Type != "message" {
+			warnChan <- fmt.Errorf("not message: '%+v'", message)
+			continue
+		}
 		message.Raw = string(msg)
 		prev = []byte{}
 
 		switch message.SubType {
 		case "":
-			messageChan <- &message
+			m := message.ToInternal()
+			messageChan <- &m
 		case "message_deleted":
 			d := deletedEvent{}
 			e := json.Unmarshal([]byte(msg), &d)
@@ -145,7 +155,8 @@ func (cli *SlackClient) Polling(
 				continue
 			}
 			d.Message.ChannelID = d.ChannelID
-			deletedMessageChan <- &d.Message
+			m := d.Message.ToInternal()
+			deletedMessageChan <- &m
 		}
 	}
 }
