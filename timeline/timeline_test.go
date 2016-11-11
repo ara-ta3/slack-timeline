@@ -64,6 +64,14 @@ func (r UserRepositoryOnMemory) Get(userID string) (slack.User, error) {
 	return slack.User{}, fmt.Errorf("not found")
 }
 
+func (r UserRepositoryOnMemory) GetAll() ([]slack.User, error) {
+	vs := []slack.User{}
+	for _, v := range r.data {
+		vs = append(vs, v)
+	}
+	return vs, nil
+}
+
 func (r UserRepositoryOnMemory) Clear() error {
 	r.data = map[string]slack.User{}
 	return nil
@@ -103,13 +111,8 @@ func NewServiceForTest(
 		TimelineChannelID:   t,
 		BlackListChannelIDs: bs,
 	}
-	return TimelineService{
-		SlackClient:       slack.SlackClient{},
-		UserRepository:    userRepository,
-		MessageRepository: messageRepository,
-		MessageValidator:  v,
-		logger:            *logger,
-	}
+	r, _ := NewTimelineService(slack.SlackClient{}, userRepository, messageRepository, v, *logger)
+	return r
 }
 
 func TestTimelineServicePutMessage(t *testing.T) {
