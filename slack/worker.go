@@ -1,5 +1,7 @@
 package slack
 
+import "../timeline"
+
 type SlackTimelineWorker struct {
 	slackClient SlackClient
 }
@@ -11,7 +13,7 @@ func NewSlackTimelineWorker(slackClient SlackClient) SlackTimelineWorker {
 }
 
 func (w SlackTimelineWorker) Polling(
-	messageChan, deletedMessageChan chan *SlackMessage,
+	messageChan, deletedMessageChan chan *timeline.Message,
 	warnChan, errorChan chan error,
 	endChan chan bool,
 ) {

@@ -5,14 +5,12 @@ import (
 	"os"
 	"testing"
 
-	"../slack"
-
 	"github.com/stretchr/testify/assert"
 )
 
 var emptyWorker = TimelineWorkerMock{
 	polling: func(
-		messageChan, deletedMessageChan chan *slack.SlackMessage,
+		messageChan, deletedMessageChan chan *Message,
 		warnChan, errorChan chan error,
 		endChan chan bool,
 	) {
@@ -20,9 +18,9 @@ var emptyWorker = TimelineWorkerMock{
 	},
 }
 
-var emptyUserRepository = UserRepositoryOnMemory{data: map[string]slack.User{}}
+var emptyUserRepository = UserRepositoryOnMemory{data: map[string]User{}}
 
-var emptyMessageRepository = MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
+var emptyMessageRepository = MessageRepositoryOnMemory{data: map[string]Message{}}
 
 func NewServiceForTest(
 	worker TimelineWorker,
@@ -42,8 +40,7 @@ func NewServiceForTest(
 
 func TestIsTargetReturnFalseWhenReceivedMessageWithTheSameChannelID(t *testing.T) {
 	s := NewServiceForTest(emptyWorker, emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slack.SlackMessage{
-		Type:      "message",
+	m := Message{
 		ChannelID: "CtimelineChannelID",
 	}
 	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
@@ -51,8 +48,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageWithTheSameChannelID(t *testing.T
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T) {
 	s := NewServiceForTest(emptyWorker, emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slack.SlackMessage{
-		Type:      "message",
+	m := Message{
 		ChannelID: "Phogehoge",
 	}
 	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
@@ -60,8 +56,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromNotPublicChannel(t *testing.T
 
 func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing.T) {
 	s := NewServiceForTest(emptyWorker, emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slack.SlackMessage{
-		Type:      "message",
+	m := Message{
 		ChannelID: "Caaa",
 	}
 	assert.Equal(t, false, s.MessageValidator.IsTargetMessage(&m))
@@ -69,8 +64,7 @@ func TestIsTargetReturnFalseWhenReceivedMessageFromBlacklistedChannel(t *testing
 
 func TestIsTargetReturnTrue(t *testing.T) {
 	s := NewServiceForTest(emptyWorker, emptyUserRepository, emptyMessageRepository, "CtimelineChannelID", []string{"Caaa", "Cbbb"})
-	m := slack.SlackMessage{
-		Type:      "message",
+	m := Message{
 		ChannelID: "Cccc",
 	}
 	assert.Equal(t, true, s.MessageValidator.IsTargetMessage(&m))
@@ -78,19 +72,16 @@ func TestIsTargetReturnTrue(t *testing.T) {
 }
 
 func TestTimelineServicePutMessage(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
-		"userid": slack.User{},
+	userRepository := UserRepositoryOnMemory{data: map[string]User{
+		"userid": User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]Message{}}
 	s := NewServiceForTest(emptyWorker, userRepository, messageRepository, "timelineChannelID", nil)
-	m := slack.SlackMessage{
-		Raw:       "raw",
-		Type:      "message",
-		UserID:    "userid",
+	m := Message{
 		Text:      "hogefuga",
+		UserID:    "userid",
 		ChannelID: "Cchannel",
 		TimeStamp: "ts",
-		SubType:   "",
 	}
 	e := s.PutToTimeline(&m)
 	if assert.NoError(t, e) {
@@ -100,19 +91,16 @@ func TestTimelineServicePutMessage(t *testing.T) {
 }
 
 func TestTimelineServiceDeleteFromTimeline(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
-		"userid": slack.User{},
+	userRepository := UserRepositoryOnMemory{data: map[string]User{
+		"userid": User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]Message{}}
 	s := NewServiceForTest(emptyWorker, userRepository, messageRepository, "timelineChannelID", nil)
-	m := slack.SlackMessage{
-		Raw:       "raw",
-		Type:      "message",
-		UserID:    "userid",
+	m := Message{
 		Text:      "hogefuga",
+		UserID:    "userid",
 		ChannelID: "Cchannel",
 		TimeStamp: "ts",
-		SubType:   "",
 	}
 	s.PutToTimeline(&m)
 	e := s.DeleteFromTimeline(&m)
@@ -124,22 +112,19 @@ func TestTimelineServiceDeleteFromTimeline(t *testing.T) {
 }
 
 func TestTimelineServicePutMessageFromWorker(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
-		"userid": slack.User{},
+	userRepository := UserRepositoryOnMemory{data: map[string]User{
+		"userid": User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]Message{}}
 
-	m := slack.SlackMessage{
-		Raw:       "raw",
-		Type:      "message",
-		UserID:    "userid",
+	m := Message{
 		Text:      "hogefuga",
+		UserID:    "userid",
 		ChannelID: "Cchannel",
 		TimeStamp: "ts",
-		SubType:   "",
 	}
 	polling := func(
-		messageChan, deletedMessageChan chan *slack.SlackMessage,
+		messageChan, deletedMessageChan chan *Message,
 		warnChan, errorChan chan error,
 		endChan chan bool,
 	) {
@@ -155,22 +140,18 @@ func TestTimelineServicePutMessageFromWorker(t *testing.T) {
 }
 
 func TestTimelineServiceDeleteFromTimelineFromWorker(t *testing.T) {
-	userRepository := UserRepositoryOnMemory{data: map[string]slack.User{
-		"userid": slack.User{},
+	userRepository := UserRepositoryOnMemory{data: map[string]User{
+		"userid": User{},
 	}}
-	messageRepository := MessageRepositoryOnMemory{data: map[string]slack.SlackMessage{}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]Message{}}
 
-	m := slack.SlackMessage{
-		Raw:       "raw",
-		Type:      "message",
-		UserID:    "userid",
+	m := Message{
 		Text:      "hogefuga",
 		ChannelID: "Cchannel",
 		TimeStamp: "ts",
-		SubType:   "",
 	}
 	polling := func(
-		messageChan, deletedMessageChan chan *slack.SlackMessage,
+		messageChan, deletedMessageChan chan *Message,
 		warnChan, errorChan chan error,
 		endChan chan bool,
 	) {

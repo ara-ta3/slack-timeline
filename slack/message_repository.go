@@ -3,6 +3,7 @@ package slack
 import (
 	"encoding/json"
 
+	"../timeline"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -20,26 +21,26 @@ type MessageRepositoryOnSlack struct {
 	db                *leveldb.DB
 }
 
-func (r MessageRepositoryOnSlack) FindMessageInTimeline(message SlackMessage) (SlackMessage, error) {
+func (r MessageRepositoryOnSlack) FindMessageInTimeline(message timeline.Message) (timeline.Message, error) {
 	key := message.ToKey()
 	data, err := r.db.Get([]byte(key), nil)
 	if err != nil {
-		return SlackMessage{}, err
+		return timeline.Message{}, err
 	}
 	m := SlackMessage{}
 	err = json.Unmarshal(data, &m)
 	if err != nil {
-		return SlackMessage{}, err
+		return timeline.Message{}, err
 	}
-	return m, nil
+	return m.ToInternal(), nil
 }
 
-func (r MessageRepositoryOnSlack) Put(u User, m SlackMessage) error {
+func (r MessageRepositoryOnSlack) Put(u timeline.User, m timeline.Message) error {
 	if r.alreadExists(m) {
 		return nil
 	}
 	t := m.Text + " (at <#" + m.ChannelID + "> )"
-	posted, e := r.SlackClient.postMessage(r.timelineChannelID, t, u.Name, u.Profile.ImageURL)
+	posted, e := r.SlackClient.postMessage(r.timelineChannelID, t, u.Name, u.ProfileImageURL)
 	if e != nil {
 		return e
 	}
@@ -48,12 +49,12 @@ func (r MessageRepositoryOnSlack) Put(u User, m SlackMessage) error {
 	return nil
 }
 
-func (r MessageRepositoryOnSlack) Delete(message SlackMessage) error {
+func (r MessageRepositoryOnSlack) Delete(message timeline.Message) error {
 	_, e := r.SlackClient.deleteMessage(message.TimeStamp, message.ChannelID)
 	return e
 }
 
-func (r MessageRepositoryOnSlack) alreadExists(message SlackMessage) bool {
+func (r MessageRepositoryOnSlack) alreadExists(message timeline.Message) bool {
 	key := message.ToKey()
 	_, err := r.db.Get([]byte(key), nil)
 	return err == nil
