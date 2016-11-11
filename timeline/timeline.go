@@ -6,6 +6,14 @@ import (
 	"../slack"
 )
 
+type TimelineWorker interface {
+	Polling(
+		messageChan, deletedMessageChan chan *slack.SlackMessage,
+		warnChan, errorChan chan error,
+		endChan chan bool,
+	)
+}
+
 type UserRepository interface {
 	Get(userID string) (slack.User, error)
 	GetAll() ([]slack.User, error)
@@ -20,7 +28,7 @@ type MessageRepository interface {
 }
 
 type TimelineService struct {
-	SlackClient       slack.SlackClient
+	TimelineWorker    TimelineWorker
 	UserRepository    UserRepository
 	MessageRepository MessageRepository
 	MessageValidator  MessageValidator
@@ -29,7 +37,7 @@ type TimelineService struct {
 }
 
 func NewTimelineService(
-	slackClient slack.SlackClient,
+	timelineWorker TimelineWorker,
 	userRepository UserRepository,
 	messageRepository MessageRepository,
 	messageValidator MessageValidator,
@@ -41,7 +49,7 @@ func NewTimelineService(
 		return TimelineService{}, e
 	}
 	return TimelineService{
-		SlackClient:       slackClient,
+		TimelineWorker:    timelineWorker,
 		UserRepository:    userRepository,
 		MessageRepository: messageRepository,
 		MessageValidator:  messageValidator,
@@ -50,31 +58,39 @@ func NewTimelineService(
 	}, nil
 }
 
-func (service *TimelineService) Run() error {
+func (s *TimelineService) Run() error {
 	messageChan := make(chan *slack.SlackMessage)
+	deletedMessageChan := make(chan *slack.SlackMessage)
 	errorChan := make(chan error)
 	warnChan := make(chan error)
-	deletedMessageChan := make(chan *slack.SlackMessage)
+	endChan := make(chan bool)
 
-	go service.SlackClient.Polling(messageChan, deletedMessageChan, warnChan, errorChan)
+	go s.TimelineWorker.Polling(
+		messageChan,
+		deletedMessageChan,
+		warnChan,
+		errorChan,
+		endChan,
+	)
 	for {
 		select {
 		case msg := <-messageChan:
-			e := service.PutToTimeline(msg)
+			e := s.PutToTimeline(msg)
 			if e != nil {
-				service.logger.Printf("%+v\n", e)
+				s.logger.Printf("%+v\n", e)
 			}
 		case d := <-deletedMessageChan:
-			e := service.DeleteFromTimeline(d)
+			e := s.DeleteFromTimeline(d)
 			if e != nil {
-				service.logger.Printf("%+v\n", d)
-				service.logger.Printf("%+v\n", e)
+				s.logger.Printf("%+v\n", d)
+				s.logger.Printf("%+v\n", e)
 			}
 		case e := <-warnChan:
-			service.logger.Printf("%+v\n", e)
+			s.logger.Printf("%+v\n", e)
 		case e := <-errorChan:
 			return e
-
+		case _ = <-endChan:
+			return nil
 		default:
 			break
 		}
