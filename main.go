@@ -40,7 +40,8 @@ func main() {
 	service, e := timeline.NewTimelineService(
 		slackClient,
 		userRepository,
-		messageRepository, messageValidator,
+		messageRepository,
+		messageValidator,
 		*logger,
 	)
 
