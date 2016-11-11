@@ -4,11 +4,11 @@ import (
 	"log"
 
 	"../slack"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type UserRepository interface {
 	Get(userID string) (slack.User, error)
+	GetAll() ([]slack.User, error)
 	Clear() error
 }
 
@@ -25,26 +25,29 @@ type TimelineService struct {
 	MessageRepository MessageRepository
 	MessageValidator  MessageValidator
 	logger            log.Logger
+	IDReplacer        IDReplacer
 }
 
 func NewTimelineService(
-	slackAPIToken, timelineChannelID string,
-	blackListChannelIDs []string,
-	db leveldb.DB,
+	slackClient slack.SlackClient,
+	userRepository UserRepository,
+	messageRepository MessageRepository,
+	messageValidator MessageValidator,
 	logger log.Logger,
-) TimelineService {
-	s := slack.SlackClient{Token: slackAPIToken}
-	v := MessageValidator{
-		TimelineChannelID:   timelineChannelID,
-		BlackListChannelIDs: blackListChannelIDs,
+) (TimelineService, error) {
+	f := NewIDReplacerFactory(userRepository)
+	replacer, e := f.NewReplacer()
+	if e != nil {
+		return TimelineService{}, e
 	}
 	return TimelineService{
-		SlackClient:       s,
-		UserRepository:    slack.NewUserRepository(s),
-		MessageRepository: slack.NewMessageRepository(timelineChannelID, s, db),
-		MessageValidator:  v,
+		SlackClient:       slackClient,
+		UserRepository:    userRepository,
+		MessageRepository: messageRepository,
+		MessageValidator:  messageValidator,
 		logger:            logger,
-	}
+		IDReplacer:        replacer,
+	}, nil
 }
 
 func (service *TimelineService) Run() error {
@@ -88,6 +91,8 @@ func (service *TimelineService) PutToTimeline(m *slack.SlackMessage) error {
 	if e != nil {
 		return e
 	}
+	t := service.IDReplacer.Replace(m.Text)
+	m.Text = t
 
 	e = service.MessageRepository.Put(u, *m)
 	if e != nil {

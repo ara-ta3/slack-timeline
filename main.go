@@ -28,14 +28,27 @@ func main() {
 	}
 	defer db.Close()
 
+	slackClient := slack.SlackClient{Token: config.SlackAPIToken}
+	userRepository := slack.NewUserRepository(s)
+	messageRepository := slack.NewMessageRepository(config.TimelineChannelID, s, *db)
+	messageValidator := MessageValidator{
+		TimelineChannelID:   config.TimelineChannelID,
+		BlackListChannelIDs: config.BlackListChannelIDs,
+	}
+
 	logger := log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
-	service := timeline.NewTimelineService(
-		config.SlackAPIToken,
-		config.TimelineChannelID,
-		config.BlackListChannelIDs,
-		*db,
+	service, e := timeline.NewTimelineService(
+		slackClient,
+		userRepository,
+		messageRepository,
+		messageValidator,
 		*logger,
 	)
+
+	if e != nil {
+		log.Fatalf("%+v", e)
+	}
+
 	err := service.Run()
 	if err != nil {
 		log.Fatalf("%+v", err)

@@ -19,6 +19,17 @@ type UserRepositoryOnSlack struct {
 	cache       cache.Cache
 }
 
+func (r UserRepositoryOnSlack) GetAll() ([]User, error) {
+	us, err := r.SlackClient.getAllUsers()
+	if err != nil {
+		return nil, err
+	}
+	for _, u := range us {
+		r.cache.Set(u.ID, u, cache.NoExpiration)
+	}
+	return us, nil
+}
+
 func (r UserRepositoryOnSlack) Get(userID string) (User, error) {
 	u, found := r.cache.Get(userID)
 	ret, ok := u.(User)

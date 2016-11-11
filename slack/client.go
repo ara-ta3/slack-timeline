@@ -49,6 +49,12 @@ type userListResponse struct {
 	Error string `json:"error"`
 }
 
+type allUserResponse struct {
+	OK      bool   `json:"ok"`
+	Members []User `json:"members"`
+	Error   string `json:"error"`
+}
+
 type User struct {
 	ID      string  `json:"id"`
 	Name    string  `json:"name"`
@@ -188,6 +194,29 @@ func (cli *SlackClient) getUser(userID string) (*User, error) {
 	}
 	u := r.User
 	return &u, nil
+}
+
+func (cli *SlackClient) getAllUsers() ([]User, error) {
+	res, e := http.PostForm(slackAPIEndpoint+"users.list", url.Values{
+		"token": {cli.Token},
+	})
+	if e != nil {
+		return nil, e
+	}
+	defer res.Body.Close()
+	b, e := ioutil.ReadAll(res.Body)
+	if e != nil {
+		return nil, e
+	}
+	r := allUserResponse{}
+	e = json.Unmarshal(b, &r)
+	if e != nil {
+		return nil, e
+	}
+	if !r.OK {
+		return nil, fmt.Errorf(r.Error)
+	}
+	return r.Members, nil
 }
 
 func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
