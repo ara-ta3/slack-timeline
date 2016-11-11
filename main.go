@@ -8,6 +8,7 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
+	"./slack"
 	"./timeline"
 )
 
@@ -29,9 +30,9 @@ func main() {
 	defer db.Close()
 
 	slackClient := slack.SlackClient{Token: config.SlackAPIToken}
-	userRepository := slack.NewUserRepository(s)
-	messageRepository := slack.NewMessageRepository(config.TimelineChannelID, s, *db)
-	messageValidator := MessageValidator{
+	userRepository := slack.NewUserRepository(slackClient)
+	messageRepository := slack.NewMessageRepository(config.TimelineChannelID, slackClient, *db)
+	messageValidator := timeline.MessageValidator{
 		TimelineChannelID:   config.TimelineChannelID,
 		BlackListChannelIDs: config.BlackListChannelIDs,
 	}
