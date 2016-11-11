@@ -16,6 +16,7 @@ var emptyWorker = TimelineWorkerMock{
 		warnChan, errorChan chan error,
 		endChan chan bool,
 	) {
+		endChan <- true
 	},
 }
 
