@@ -134,8 +134,14 @@ func (cli *SlackClient) Polling(
 		if err != nil {
 			warnChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", msg))
 			prev = msg
-			continue
+			message = SlackMessage{}
+			e := json.Unmarshal(received, &message)
+			if e != nil {
+				warnChan <- errors.Wrap(e, fmt.Sprintf("failed to unmarshal. received json: '%s'", received))
+				continue
+			}
 		}
+
 		if message.Type != "message" {
 			warnChan <- fmt.Errorf("not message: '%+v'", message)
 			continue
