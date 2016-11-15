@@ -70,8 +70,24 @@ type profile struct {
 	ImageURL string `json:"image_48"`
 }
 
+type channelCreated struct {
+	Type    string  `json:"type"`
+	Channel channel `json:"channel"`
+}
+
+type channel struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Creator string `json:"creator"`
+}
+
 type SlackClient struct {
 	Token string
+}
+
+func isValidJson(b []byte) bool {
+	j := map[string]interface{}{}
+	return json.Unmarshal(b, &j) == nil
 }
 
 func (cli *SlackClient) connectToRTM() (*websocket.Conn, error) {
@@ -114,6 +130,7 @@ func receive(ws *websocket.Conn) ([]byte, error) {
 func (cli *SlackClient) Polling(
 	messageChan, deletedMessageChan chan *timeline.Message,
 	warnChan, errorChan chan error,
+	restartChan chan bool,
 ) {
 	ws, e := cli.connectToRTM()
 	if e != nil {
@@ -121,27 +138,38 @@ func (cli *SlackClient) Polling(
 		return
 	}
 	defer ws.Close()
-	prev := []byte{}
+	prev := make([]byte, 0)
 	for {
 		received, e := receive(ws)
 		if e != nil {
 			errorChan <- e
 		}
 		msg := append(prev, received...)
-		message := SlackMessage{}
-		err := json.Unmarshal(msg, &message)
-
-		if err != nil {
-			warnChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal. json: '%s'", msg))
+		if !isValidJson(msg) {
 			prev = msg
 			continue
 		}
+		prev = make([]byte, 0)
+		message := SlackMessage{}
+		errOnMessage := json.Unmarshal(msg, &message)
+
+		if errOnMessage != nil {
+			event := channelCreated{}
+			errOnEvent := json.Unmarshal(msg, &event)
+			if errOnEvent != nil && errOnMessage {
+				warnChan <- errors.Wrap(errOnMessage, fmt.Sprintf("failed to unmarshal to message. json: '%s'", msg))
+				warnChan <- errors.Wrap(errOnEvent, fmt.Sprintf("failed to unmarshal to channel created. json: '%s'", msg))
+				continue
+			}
+			restartChan <- true
+			return
+		}
+
+		message.Raw = string(msg)
 		if message.Type != "message" {
 			warnChan <- fmt.Errorf("not message: '%+v'", message)
 			continue
 		}
-		message.Raw = string(msg)
-		prev = []byte{}
 
 		switch message.SubType {
 		case "":

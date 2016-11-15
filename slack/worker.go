@@ -15,7 +15,7 @@ func NewSlackTimelineWorker(slackClient SlackClient) SlackTimelineWorker {
 func (w SlackTimelineWorker) Polling(
 	messageChan, deletedMessageChan chan *timeline.Message,
 	warnChan, errorChan chan error,
-	endChan chan bool,
+	endChan, restartChan chan bool,
 ) {
-	w.slackClient.Polling(messageChan, deletedMessageChan, warnChan, errorChan)
+	w.slackClient.Polling(messageChan, deletedMessageChan, warnChan, errorChan, restartChan)
 }
