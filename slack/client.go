@@ -156,7 +156,7 @@ func (cli *SlackClient) Polling(
 		if errOnMessage != nil {
 			event := channelCreated{}
 			errOnEvent := json.Unmarshal(msg, &event)
-			if errOnEvent != nil && errOnMessage {
+			if errOnEvent != nil && errOnMessage != nil {
 				warnChan <- errors.Wrap(errOnMessage, fmt.Sprintf("failed to unmarshal to message. json: '%s'", msg))
 				warnChan <- errors.Wrap(errOnEvent, fmt.Sprintf("failed to unmarshal to channel created. json: '%s'", msg))
 				continue
@@ -179,7 +179,7 @@ func (cli *SlackClient) Polling(
 			d := deletedEvent{}
 			e := json.Unmarshal([]byte(msg), &d)
 			if e != nil {
-				warnChan <- errors.Wrap(err, fmt.Sprintf("failed to unmarshal to deleted event. json: '%s'", msg))
+				warnChan <- errors.Wrap(e, fmt.Sprintf("failed to unmarshal to deleted event. json: '%s'", msg))
 				continue
 			}
 			d.Message.ChannelID = d.ChannelID
