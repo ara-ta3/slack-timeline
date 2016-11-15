@@ -11,7 +11,7 @@ type TimelineWorkerMock struct {
 func (w TimelineWorkerMock) Polling(
 	messageChan, deletedMessageChan chan *Message,
 	warnChan, errorChan chan error,
-	endChan chan bool,
+	endChan, restartChan chan bool,
 ) {
-	w.polling(messageChan, deletedMessageChan, warnChan, errorChan, endChan)
+	w.polling(messageChan, deletedMessageChan, warnChan, errorChan, endChan, restartChan)
 }
