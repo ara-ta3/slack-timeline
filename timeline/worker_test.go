@@ -4,7 +4,7 @@ type TimelineWorkerMock struct {
 	polling func(
 		messageChan, deletedMessageChan chan *Message,
 		warnChan, errorChan chan error,
-		endChan chan bool,
+		endChan, restartChan chan bool,
 	)
 }
 
