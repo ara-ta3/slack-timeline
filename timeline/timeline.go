@@ -7,7 +7,7 @@ import (
 type TimelineWorker interface {
 	Polling(
 		messageChan, deletedMessageChan chan *Message,
-		warnChan, errorChan chan error,
+		errorChan chan error,
 		endChan chan bool,
 	)
 }
@@ -59,13 +59,11 @@ func (s *TimelineService) Run() error {
 	messageChan := make(chan *Message)
 	deletedMessageChan := make(chan *Message)
 	errorChan := make(chan error)
-	warnChan := make(chan error)
 	endChan := make(chan bool)
 
 	go s.TimelineWorker.Polling(
 		messageChan,
 		deletedMessageChan,
-		warnChan,
 		errorChan,
 		endChan,
 	)
@@ -82,8 +80,6 @@ func (s *TimelineService) Run() error {
 				s.logger.Printf("%+v\n", d)
 				s.logger.Printf("%+v\n", e)
 			}
-		case e := <-warnChan:
-			s.logger.Printf("%+v\n", e)
 		case e := <-errorChan:
 			return e
 		case _ = <-endChan:
