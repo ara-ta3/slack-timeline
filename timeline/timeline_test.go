@@ -11,7 +11,7 @@ import (
 var emptyWorker = TimelineWorkerMock{
 	polling: func(
 		messageChan, deletedMessageChan chan *Message,
-		warnChan, errorChan chan error,
+		errorChan chan error,
 		endChan chan bool,
 	) {
 		endChan <- true
@@ -125,7 +125,7 @@ func TestTimelineServicePutMessageFromWorker(t *testing.T) {
 	}
 	polling := func(
 		messageChan, deletedMessageChan chan *Message,
-		warnChan, errorChan chan error,
+		errorChan chan error,
 		endChan chan bool,
 	) {
 		messageChan <- &m
@@ -152,7 +152,7 @@ func TestTimelineServiceDeleteFromTimelineFromWorker(t *testing.T) {
 	}
 	polling := func(
 		messageChan, deletedMessageChan chan *Message,
-		warnChan, errorChan chan error,
+		errorChan chan error,
 		endChan chan bool,
 	) {
 		messageChan <- &m
