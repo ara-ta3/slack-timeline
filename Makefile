@@ -4,6 +4,8 @@ goos_opt=GOOS=$(GOOS)
 goarch_opt=GOARCH=$(GOARCH)
 out=slacktimeline
 out_opt="-o $(out)"
+trace=/tmp/timeline.trace
+bench=TimelineService
 
 help:
 	@cat Makefile
@@ -29,3 +31,6 @@ build_for_local:
 
 test:
 	go test -v ./timeline/...
+
+bench:
+	go test -bench=$(bench) -trace=$(trace) ./timeline
