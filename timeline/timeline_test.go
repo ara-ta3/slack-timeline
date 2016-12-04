@@ -5,6 +5,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/pkg/profile"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -164,4 +165,32 @@ func TestTimelineServiceDeleteFromTimelineFromWorker(t *testing.T) {
 	s.Run()
 	_, found := messageRepository.data[m.ToKey()]
 	assert.False(t, found)
+}
+
+func BenchmarkTimelineServicePutMessageFromWorker(b *testing.B) {
+	userRepository := UserRepositoryOnMemory{data: map[string]User{
+		"userid": User{},
+	}}
+	messageRepository := MessageRepositoryOnMemory{data: map[string]Message{}}
+
+	m := Message{
+		Text:      "hogefuga",
+		UserID:    "userid",
+		ChannelID: "Cchannel",
+		TimeStamp: "ts",
+	}
+	polling := func(
+		messageChan, deletedMessageChan chan *Message,
+		errorChan chan error,
+		endChan chan bool,
+	) {
+		messageChan <- &m
+		endChan <- true
+	}
+	defer profile.Start().Stop()
+	for i := 0; i < b.N; i++ {
+		worker := TimelineWorkerMock{polling: polling}
+		s := NewServiceForTest(worker, userRepository, messageRepository, "timelineChannelID", nil)
+		s.Run()
+	}
 }
