@@ -2,6 +2,7 @@ package slack
 
 import (
 	"encoding/json"
+	"time"
 
 	"golang.org/x/net/websocket"
 
@@ -57,6 +58,7 @@ func (w SlackTimelineWorker) Polling(
 	defer con.Close()
 	prev := make([]byte, 0)
 	for {
+		time.Sleep(1 * time.Second)
 		received, e := con.Read()
 		if e != nil {
 			errorChan <- e
