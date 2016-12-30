@@ -3,7 +3,7 @@ package slack
 import (
 	"time"
 
-	"../timeline"
+	"github.com/ara-ta3/slack-timeline/timeline"
 	cache "github.com/patrickmn/go-cache"
 )
 

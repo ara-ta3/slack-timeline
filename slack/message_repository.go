@@ -3,7 +3,7 @@ package slack
 import (
 	"encoding/json"
 
-	"../timeline"
+	"github.com/ara-ta3/slack-timeline/timeline"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
