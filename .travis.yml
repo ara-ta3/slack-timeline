@@ -3,7 +3,8 @@ language: go
 go:
     - 1.7
 
-install: make install
+install:
+    - make install
 
 script:
     - make test

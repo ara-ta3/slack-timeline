@@ -1,6 +1,6 @@
 GOOS=
 GOARCH=
-GLIDE=$(shell which glide)
+GLIDE=$(GOPATH)/bin/glide
 config=config.json
 goos_opt=GOOS=$(GOOS)
 goarch_opt=GOARCH=$(GOARCH)
@@ -13,8 +13,8 @@ help:
 run: install $(config)
 	go run main.go config.go -c $(config)
 
-install: 
-	$(GLIDE) install
+install: $(GLIDE)
+	$< install
 
 build: install
 	$(goos_opt) $(goarch_opt) go build $(out_opt)
@@ -30,3 +30,6 @@ test:
 
 $(config): config.sample.json
 	cp -f $< $@
+
+$(GLIDE):
+	go get github.com/Masterminds/glide
