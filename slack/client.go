@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"../timeline"
+	"github.com/ara-ta3/slack-timeline/timeline"
 
 	"golang.org/x/net/websocket"
 )

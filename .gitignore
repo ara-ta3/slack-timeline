@@ -2,3 +2,4 @@ slacktimeline
 config.json
 db
 *.swp
+vendor

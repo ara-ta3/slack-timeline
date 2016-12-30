@@ -8,8 +8,8 @@ import (
 
 	"github.com/syndtr/goleveldb/leveldb"
 
-	"./slack"
-	"./timeline"
+	"github.com/ara-ta3/slack-timeline/slack"
+	"github.com/ara-ta3/slack-timeline/timeline"
 )
 
 func main() {

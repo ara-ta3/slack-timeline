@@ -6,7 +6,7 @@ import (
 
 	"golang.org/x/net/websocket"
 
-	"../timeline"
+	"github.com/ara-ta3/slack-timeline/timeline"
 )
 
 type SlackTimelineWorker struct {
