@@ -1,7 +1,7 @@
-# SlackTimeline
+SlackTimeline
 ===
 
-[![Build Status](https://travis-ci.org/ara-ta3/slacktimeline.svg?branch=master)](https://travis-ci.org/ara-ta3/slacktimeline)
+[![Build Status](https://travis-ci.org/ara-ta3/slack-timeline.svg?branch=master)](https://travis-ci.org/ara-ta3/slack-timeline)
 
 SlackTimeline sends all messages in public channels to a specific channel. e.g. #timeline.  
 
