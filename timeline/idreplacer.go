@@ -36,7 +36,15 @@ func (f IDReplacerFactory) NewReplacer() (IDReplacer, error) {
 		ns[2*i] = fmt.Sprintf("<@%s>", u.ID)
 		ns[2*i+1] = fmt.Sprintf("@%s", u.Name)
 	}
-	r := strings.NewReplacer(ns...)
+	ms := []string{
+		"<!here|@here>",
+		"@here",
+		"<!channel>",
+		"@channel",
+	}
+	replace := append(ns, ms...)
+
+	r := strings.NewReplacer(replace...)
 	return IDReplacer{
 		replacer:  r,
 		IDToNames: ns,
