@@ -2,7 +2,6 @@ package slack
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/net/websocket"
@@ -60,7 +59,6 @@ func (w SlackTimelineWorker) Polling(
 	defer con.Close()
 	prev := make([]byte, 0)
 	for {
-		time.Sleep(1 * time.Second)
 		received, e := con.Read()
 		if e != nil {
 			err := errors.Wrap(e, "failed to reading from slack rtm")
@@ -97,11 +95,12 @@ func (w SlackTimelineWorker) Polling(
 			continue
 		}
 
-		switch message.SubType {
-		case "":
+		if message.IsMessageToPost() {
 			m := message.ToInternal()
 			messageChan <- &m
-		case "message_deleted":
+		}
+
+		if message.IsDeletedMessage() {
 			d := deletedEvent{}
 			e := json.Unmarshal([]byte(msg), &d)
 			if e != nil {
