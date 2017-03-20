@@ -38,11 +38,6 @@ type SlackMessage struct {
 	ChannelID string `json:"channel"`
 	TimeStamp string `json:"ts"`
 	SubType   string `json:"subtype"`
-	File      File   `json:"file"`
-}
-
-type File struct {
-	Permalink string `json:"permalink"`
 }
 
 func (m *SlackMessage) IsMessageToPost() bool {
@@ -58,15 +53,12 @@ func (m *SlackMessage) isFileShare() bool {
 }
 
 func (m *SlackMessage) ToInternal() timeline.Message {
-	if m.isFileShare() {
-		return timeline.NewMessage(
-			m.File.Permalink,
-			m.UserID,
-			m.ChannelID,
-			m.TimeStamp,
-		)
-	}
-	return timeline.NewMessage(m.Text, m.UserID, m.ChannelID, m.TimeStamp)
+	return timeline.NewMessage(
+		ReplaceIdFormatToName(m.Text),
+		m.UserID,
+		m.ChannelID,
+		m.TimeStamp,
+	)
 }
 
 type userListResponse struct {

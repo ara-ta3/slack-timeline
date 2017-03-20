@@ -27,6 +27,7 @@ build_for_local:
 
 test:
 	go test -v ./timeline/...
+	go test -v ./slack/...
 
 $(config): config.sample.json
 	cp -f $< $@
