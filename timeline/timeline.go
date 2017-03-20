@@ -2,6 +2,8 @@ package timeline
 
 import (
 	"log"
+
+	"github.com/pkg/errors"
 )
 
 type TimelineWorker interface {
@@ -113,10 +115,12 @@ func (service *TimelineService) PutToTimeline(m *Message) error {
 func (service *TimelineService) DeleteFromTimeline(originMessage *Message) error {
 	m, e := service.MessageRepository.FindMessageInTimeline(*originMessage)
 	if e != nil {
+		e = errors.Wrap(e, "failed to find message in timeline")
 		return e
 	}
 	e = service.MessageRepository.Delete(m)
 	if e != nil {
+		e = errors.Wrap(e, "failed to delete message in timeline")
 		return e
 	}
 	return nil

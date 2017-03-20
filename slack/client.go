@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/ara-ta3/slack-timeline/timeline"
+	"github.com/pkg/errors"
 
 	"golang.org/x/net/websocket"
 )
@@ -95,16 +96,19 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 	}
 	resp, e := http.Get(rtmStartURL + "?" + v.Encode())
 	if e != nil {
+		e := errors.Wrap(e, "failed to start rtm connection")
 		return SlackRTMConnection{}, e
 	}
 	defer resp.Body.Close()
 	byteArray, e := ioutil.ReadAll(resp.Body)
 	if e != nil {
+		e := errors.Wrap(e, fmt.Sprintf("failed read body on starting rtm connection. response: %+v", res))
 		return SlackRTMConnection{}, e
 	}
 	res := rtmStartResponse{}
 	e = json.Unmarshal(byteArray, &res)
 	if e != nil {
+		e := errors.Wrap(e, fmt.Sprintf("failed unmarshal body on starting rtm connection. response: %+v", res))
 		return SlackRTMConnection{}, e
 	}
 	if !res.OK {
@@ -112,6 +116,7 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 	}
 	ws, e := websocket.Dial(res.URL, "", origin)
 	if e != nil {
+		e := errors.Wrap(e, fmt.Sprintf("failed dialing to websocket. response: %+v", res))
 		return SlackRTMConnection{}, e
 	}
 	return SlackRTMConnection{
@@ -130,11 +135,13 @@ func (cli *SlackClient) postMessage(channelID, text, userName, iconURL string) (
 		"link_names": {"0"},
 	})
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed to post message. user: %s, channel: %s. text: %s", userName, channelID, text))
 		return nil, e
 	}
 	defer res.Body.Close()
 	byteArray, e := ioutil.ReadAll(res.Body)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed read all. response: %+v", res))
 		return nil, e
 	}
 	return byteArray, nil
@@ -146,16 +153,19 @@ func (cli *SlackClient) getUser(userID string) (*User, error) {
 		"user":  {userID},
 	})
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed to get user info. user: %s", userID))
 		return nil, e
 	}
 	defer res.Body.Close()
 	b, e := ioutil.ReadAll(res.Body)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed read all. response: %+v", res))
 		return nil, e
 	}
 	r := userListResponse{}
 	e = json.Unmarshal(b, &r)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed to Unmarshal response body on get user info. body: %+v", b))
 		return nil, e
 	}
 	if !r.OK {
@@ -170,16 +180,19 @@ func (cli *SlackClient) getAllUsers() ([]User, error) {
 		"token": {cli.Token},
 	})
 	if e != nil {
+		e = errors.Wrap(e, "failed to get user lists.")
 		return nil, e
 	}
 	defer res.Body.Close()
 	b, e := ioutil.ReadAll(res.Body)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed read all. response: %+v", res))
 		return nil, e
 	}
 	r := allUserResponse{}
 	e = json.Unmarshal(b, &r)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed to Unmarshal response body on get users lists. body: %+v", b))
 		return nil, e
 	}
 	if !r.OK {
@@ -195,11 +208,13 @@ func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
 		"channel": {channel},
 	})
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed to delete message. ts: %s, channel: %s", ts, channel))
 		return nil, e
 	}
 	defer res.Body.Close()
 	byteArray, e := ioutil.ReadAll(res.Body)
 	if e != nil {
+		e = errors.Wrap(e, fmt.Sprintf("failed read all. response: %+v", res))
 		return nil, e
 	}
 	return byteArray, nil
