@@ -40,8 +40,25 @@ type SlackMessage struct {
 	SubType   string `json:"subtype"`
 }
 
+func (m *SlackMessage) IsMessageToPost() bool {
+	return m.SubType == "" || m.isFileShare()
+}
+
+func (m *SlackMessage) IsDeletedMessage() bool {
+	return m.SubType == "message_deleted"
+}
+
+func (m *SlackMessage) isFileShare() bool {
+	return m.SubType == "file_share"
+}
+
 func (m *SlackMessage) ToInternal() timeline.Message {
-	return timeline.NewMessage(m.Text, m.UserID, m.ChannelID, m.TimeStamp)
+	return timeline.NewMessage(
+		ReplaceIdFormatToName(m.Text),
+		m.UserID,
+		m.ChannelID,
+		m.TimeStamp,
+	)
 }
 
 type userListResponse struct {
