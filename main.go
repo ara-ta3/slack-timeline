@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -12,23 +11,24 @@ import (
 	"github.com/ara-ta3/slack-timeline/timeline"
 )
 
+var logger = log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
+
 func main() {
 	filePath := flag.String("c", "config.json", "file path to config.json")
 	dbPath := flag.String("db", "db", "path of db for deleting message")
 	flag.Parse()
-	fmt.Printf("filepath: %s\n", *filePath)
-	fmt.Printf("dbpath: %s\n", *dbPath)
+	logger.Printf("filepath: %s\n", *filePath)
+	logger.Printf("dbpath: %s\n", *dbPath)
 	config, e := ReadConfig(*filePath)
 	if e != nil {
-		log.Fatalln(e)
+		logger.Fatalln(e)
 	}
 
 	db, e := leveldb.OpenFile(*dbPath, nil)
 	if e != nil {
-		log.Fatalln(e)
+		logger.Fatalln(e)
 	}
 	defer db.Close()
-
 	slackClient := slack.SlackClient{Token: config.SlackAPIToken}
 	worker := slack.NewSlackTimelineWorker(slackClient)
 	userRepository := slack.NewUserRepository(slackClient)
@@ -38,7 +38,6 @@ func main() {
 		BlackListChannelIDs: config.BlackListChannelIDs,
 	}
 
-	logger := log.New(os.Stdout, "", log.Ldate+log.Ltime+log.Lshortfile)
 	service, e := timeline.NewTimelineService(
 		worker,
 		userRepository,
