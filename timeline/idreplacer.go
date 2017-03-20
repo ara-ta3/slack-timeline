@@ -3,6 +3,8 @@ package timeline
 import (
 	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type IDReplacer struct {
@@ -27,6 +29,7 @@ type IDReplacerFactory struct {
 func (f IDReplacerFactory) NewReplacer() (IDReplacer, error) {
 	us, e := f.userRepository.GetAll()
 	if e != nil {
+		e = errors.Wrap(e, "failed to get all from user repository")
 		return IDReplacer{}, e
 	}
 

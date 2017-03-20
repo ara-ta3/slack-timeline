@@ -1,10 +1,12 @@
-hash: 7929ab3e8d711511ef113a7bcc8f8ae8d02bd5409f7a202c3f86220473e25dd9
-updated: 2016-12-30T16:03:59.91445924+09:00
+hash: a20d9f050bb6279ff4aebdb81a7f2fe23ab354d445ab5ca62bd9ac3f625ad4d3
+updated: 2017-03-20T14:31:37.492917641+09:00
 imports:
 - name: github.com/golang/snappy
   version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
 - name: github.com/patrickmn/go-cache
   version: 1881a9bccb818787f68c52bfba648c6cf34c34fa
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/syndtr/goleveldb
   version: 23851d93a2292dcc56e71a18ec9e0624d84a0f65
   subpackages:

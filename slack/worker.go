@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/pkg/errors"
 	"golang.org/x/net/websocket"
 
 	"github.com/ara-ta3/slack-timeline/timeline"
@@ -52,7 +53,8 @@ func (w SlackTimelineWorker) Polling(
 ) {
 	con, e := w.rtmClient.ConnectToRTM()
 	if e != nil {
-		errorChan <- e
+		err := errors.Wrap(e, "failed to connecting to slack rtm")
+		errorChan <- err
 		return
 	}
 	defer con.Close()
@@ -61,7 +63,8 @@ func (w SlackTimelineWorker) Polling(
 		time.Sleep(1 * time.Second)
 		received, e := con.Read()
 		if e != nil {
-			errorChan <- e
+			err := errors.Wrap(e, "failed to reading from slack rtm")
+			errorChan <- err
 		}
 		msg := append(prev, received...)
 		if !isValidJson(msg) {
@@ -81,7 +84,8 @@ func (w SlackTimelineWorker) Polling(
 			con.Close()
 			con, e = w.rtmClient.ConnectToRTM()
 			if e != nil {
-				errorChan <- e
+				err := errors.Wrap(e, "failed to connecting to slack rtm")
+				errorChan <- err
 				return
 			}
 			defer con.Close()
