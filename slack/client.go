@@ -102,13 +102,13 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 	defer resp.Body.Close()
 	byteArray, e := ioutil.ReadAll(resp.Body)
 	if e != nil {
-		e := errors.Wrap(e, fmt.Sprintf("failed read body on starting rtm connection. response: %+v", res))
+		e := errors.Wrap(e, fmt.Sprintf("failed read body on starting rtm connection. response: %+v", resp))
 		return SlackRTMConnection{}, e
 	}
 	res := rtmStartResponse{}
 	e = json.Unmarshal(byteArray, &res)
 	if e != nil {
-		e := errors.Wrap(e, fmt.Sprintf("failed unmarshal body on starting rtm connection. response: %+v", res))
+		e := errors.Wrap(e, fmt.Sprintf("failed unmarshal body on starting rtm connection. response: %+v", resp))
 		return SlackRTMConnection{}, e
 	}
 	if !res.OK {
