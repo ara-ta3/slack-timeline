@@ -8,7 +8,7 @@ import (
 )
 
 func NewUserRepository(s SlackClient) UserRepositoryOnSlack {
-	c := cache.New(cache.NoExpiration, 30*time.Minute)
+	c := cache.New(cache.NoExpiration, 24*time.Hour)
 	return UserRepositoryOnSlack{
 		s,
 		*c,
