@@ -209,7 +209,7 @@ func (cli *SlackClient) getAllUsers() ([]User, error) {
 	r := allUserResponse{}
 	e = json.Unmarshal(b, &r)
 	if e != nil {
-		e = errors.Wrap(e, fmt.Sprintf("failed to Unmarshal response body on get users lists. body: %+v", b))
+		e = errors.Wrap(e, fmt.Sprintf("failed to Unmarshal response body on get users lists. body: %+v, response: %+v", string(b), res))
 		return nil, e
 	}
 	if !r.OK {
