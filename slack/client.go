@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/ara-ta3/slack-timeline/timeline"
 	"github.com/pkg/errors"
@@ -142,7 +143,7 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 }
 
 func (cli *SlackClient) postMessage(channelID, text, userName, iconURL string) ([]byte, error) {
-	res, e := http.PostForm(slackAPIEndpoint+"chat.postMessage", url.Values{
+	res, e := httpRequestWithRetry(slackAPIEndpoint+"chat.postMessage", url.Values{
 		"token":      {cli.Token},
 		"channel":    {channelID},
 		"text":       {text},
@@ -150,7 +151,7 @@ func (cli *SlackClient) postMessage(channelID, text, userName, iconURL string) (
 		"as_user":    {"false"},
 		"icon_url":   {iconURL},
 		"link_names": {"0"},
-	})
+	}, 5)
 	if e != nil {
 		e = errors.Wrap(e, fmt.Sprintf("failed to post message. user: %s, channel: %s. text: %s", userName, channelID, text))
 		return nil, e
@@ -165,10 +166,10 @@ func (cli *SlackClient) postMessage(channelID, text, userName, iconURL string) (
 }
 
 func (cli *SlackClient) getUser(userID string) (*User, error) {
-	res, e := http.PostForm(slackAPIEndpoint+"users.info", url.Values{
+	res, e := httpRequestWithRetry(slackAPIEndpoint+"users.info", url.Values{
 		"token": {cli.Token},
 		"user":  {userID},
-	})
+	}, 5)
 	if e != nil {
 		e = errors.Wrap(e, fmt.Sprintf("failed to get user info. user: %s", userID))
 		return nil, e
@@ -193,9 +194,9 @@ func (cli *SlackClient) getUser(userID string) (*User, error) {
 }
 
 func (cli *SlackClient) getAllUsers() ([]User, error) {
-	res, e := http.PostForm(slackAPIEndpoint+"users.list", url.Values{
+	res, e := httpRequestWithRetry(slackAPIEndpoint+"users.list", url.Values{
 		"token": {cli.Token},
-	})
+	}, 5)
 	if e != nil {
 		e = errors.Wrap(e, "failed to get user lists.")
 		return nil, e
@@ -219,11 +220,15 @@ func (cli *SlackClient) getAllUsers() ([]User, error) {
 }
 
 func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
-	res, e := http.PostForm(slackAPIEndpoint+"chat.delete", url.Values{
-		"token":   {cli.Token},
-		"ts":      {ts},
-		"channel": {channel},
-	})
+	res, e := httpRequestWithRetry(
+		slackAPIEndpoint+"chat.delete",
+		url.Values{
+			"token":   {cli.Token},
+			"ts":      {ts},
+			"channel": {channel},
+		},
+		5,
+	)
 	if e != nil {
 		e = errors.Wrap(e, fmt.Sprintf("failed to delete message. ts: %s, channel: %s", ts, channel))
 		return nil, e
@@ -235,4 +240,21 @@ func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
 		return nil, e
 	}
 	return byteArray, nil
+}
+
+func httpRequestWithRetry(url string, params url.Values, n int) (*http.Response, error) {
+	res, err := Retry(
+		n,
+		func(n int) time.Duration {
+			return time.Duration(n) * time.Duration(n) * time.Second
+		},
+		func() (*http.Response, error) {
+			return http.PostForm(url, params)
+		},
+	)
+	if err != nil {
+		return res, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
+	}
+	return res, nil
+
 }
