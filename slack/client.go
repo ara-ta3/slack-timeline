@@ -248,13 +248,13 @@ func httpRequestWithRetry(url string, params url.Values, n int) (*http.Response,
 		func(n int) time.Duration {
 			return time.Duration(n) * time.Duration(n) * time.Second
 		},
-		func() (*http.Response, error) {
+		func() (interface{}, error) {
 			return http.PostForm(url, params)
 		},
 	)
 	if err != nil {
-		return res, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
+		return res.(*http.Response), errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
 	}
-	return res, nil
+	return res.(*http.Response), nil
 
 }

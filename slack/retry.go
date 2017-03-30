@@ -8,16 +8,16 @@ import (
 func Retry(
 	n int,
 	interval func(n int) time.Duration,
-	httpFn func() (*http.Response, error),
-) (*http.Response, error) {
+	httpFn func() (interface{}, error),
+) (interface{}, error) {
 	return loop(1, n, interval, httpFn)
 }
 
 func loop(
 	i, n int,
 	interval func(n int) time.Duration,
-	httpFn func() (*http.Response, error),
-) (*http.Response, error) {
+	httpFn func() (interface{}, error),
+) (interface{}, error) {
 	res, err := httpFn()
 	if i >= n {
 		return res, err

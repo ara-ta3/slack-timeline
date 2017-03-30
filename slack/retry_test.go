@@ -16,7 +16,7 @@ func TestRetry10Times(t *testing.T) {
 		func(n int) time.Duration {
 			return 0 * time.Second
 		},
-		func() (*http.Response, error) {
+		func() (interface{}, error) {
 			c++
 			return nil, fmt.Errorf("dummy")
 		},
@@ -31,7 +31,7 @@ func TestNotRetryWhenSuccessedHTTPResponse(t *testing.T) {
 		func(n int) time.Duration {
 			return 0 * time.Second
 		},
-		func() (*http.Response, error) {
+		func() (interface{}, error) {
 			return &http.Response{
 				StatusCode: http.StatusOK,
 			}, nil
