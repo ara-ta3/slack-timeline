@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/ara-ta3/slack-timeline/timeline"
@@ -112,21 +113,56 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 	v := url.Values{
 		"token": {cli.Token},
 	}
-	resp, e := http.Get(rtmStartURL + "?" + v.Encode())
+	resp, e := Retry(
+		10,
+		func(n int, result interface{}) time.Duration {
+			r, ok := result.(*http.Response)
+			exponential := time.Duration(n) * time.Duration(n) * time.Second
+			if !ok {
+				return exponential
+			}
+			h := r.Header
+			ts := h.Get("Retry-After")
+			if ts == "" {
+				return exponential
+			}
+			t, e := strconv.Atoi(ts)
+			if e != nil {
+				return exponential
+			}
+
+			return time.Duration(t) * time.Second
+		},
+		func() (interface{}, error) {
+			return http.Get(rtmStartURL + "?" + v.Encode())
+		},
+		func(res interface{}) bool {
+			r, ok := res.(*http.Response)
+			if !ok {
+				return true
+			}
+			return r.StatusCode == http.StatusTooManyRequests
+		},
+	)
+
 	if e != nil {
 		e := errors.Wrap(e, "failed to start rtm connection")
 		return SlackRTMConnection{}, e
 	}
-	defer resp.Body.Close()
-	byteArray, e := ioutil.ReadAll(resp.Body)
+	r, ok := resp.(*http.Response)
+	if !ok {
+		return SlackRTMConnection{}, fmt.Errorf("Failed to cast to http response. result: %+v", resp)
+	}
+	defer r.Body.Close()
+	byteArray, e := ioutil.ReadAll(r.Body)
 	if e != nil {
-		e := errors.Wrap(e, fmt.Sprintf("failed read body on starting rtm connection. response: %+v", resp))
+		e := errors.Wrap(e, fmt.Sprintf("failed read body on starting rtm connection. response: %+v", r))
 		return SlackRTMConnection{}, e
 	}
 	res := rtmStartResponse{}
 	e = json.Unmarshal(byteArray, &res)
 	if e != nil {
-		e := errors.Wrap(e, fmt.Sprintf("failed unmarshal body on starting rtm connection. response: %+v", resp))
+		e := errors.Wrap(e, fmt.Sprintf("failed unmarshal body on starting rtm connection. response: %+v", r))
 		return SlackRTMConnection{}, e
 	}
 	if !res.OK {
@@ -245,16 +281,42 @@ func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
 func httpRequestWithRetry(url string, params url.Values, n int) (*http.Response, error) {
 	res, err := Retry(
 		n,
-		func(n int) time.Duration {
-			return time.Duration(n) * time.Duration(n) * time.Second
+		func(n int, res interface{}) time.Duration {
+			r, ok := res.(*http.Response)
+			exponential := time.Duration(n) * time.Duration(n) * time.Second
+			if !ok {
+				return exponential
+			}
+			h := r.Header
+			ts := h.Get("Retry-After")
+			if ts == "" {
+				return exponential
+			}
+			t, e := strconv.Atoi(ts)
+			if e != nil {
+				return exponential
+			}
+
+			return time.Duration(t) * time.Second
 		},
 		func() (interface{}, error) {
 			return http.PostForm(url, params)
 		},
+		func(res interface{}) bool {
+			r, ok := res.(*http.Response)
+			if !ok {
+				return true
+			}
+			return r.StatusCode == http.StatusTooManyRequests
+		},
 	)
 	if err != nil {
-		return res.(*http.Response), errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
+		return nil, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
 	}
-	return res.(*http.Response), nil
+	r, ok := res.(*http.Response)
+	if !ok {
+		return nil, fmt.Errorf("Result cannot parse to http response. result: %+v", res)
+	}
+	return r, nil
 
 }
