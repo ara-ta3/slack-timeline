@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strconv"
-	"time"
 
 	"github.com/ara-ta3/slack-timeline/timeline"
 	"github.com/pkg/errors"
@@ -113,45 +111,17 @@ func (cli SlackClient) ConnectToRTM() (RTMConnection, error) {
 	v := url.Values{
 		"token": {cli.Token},
 	}
-	resp, e := Retry(
-		10,
-		func(n int, result interface{}) time.Duration {
-			r, ok := result.(*http.Response)
-			exponential := time.Duration(n) * time.Duration(n) * time.Second
-			if !ok {
-				return exponential
-			}
-			h := r.Header
-			ts := h.Get("Retry-After")
-			if ts == "" {
-				return exponential
-			}
-			t, e := strconv.Atoi(ts)
-			if e != nil {
-				return exponential
-			}
-
-			return time.Duration(t) * time.Second
-		},
-		func() (interface{}, error) {
+	req := SlackRetryAble{
+		N: 10,
+		HttpFunc: func() (*http.Response, error) {
 			return http.Get(rtmStartURL + "?" + v.Encode())
 		},
-		func(res interface{}) bool {
-			r, ok := res.(*http.Response)
-			if !ok {
-				return true
-			}
-			return r.StatusCode == http.StatusTooManyRequests
-		},
-	)
+	}
+	r, e := req.Request()
 
 	if e != nil {
 		e := errors.Wrap(e, "failed to start rtm connection")
 		return SlackRTMConnection{}, e
-	}
-	r, ok := resp.(*http.Response)
-	if !ok {
-		return SlackRTMConnection{}, fmt.Errorf("Failed to cast to http response. result: %+v", resp)
 	}
 	defer r.Body.Close()
 	byteArray, e := ioutil.ReadAll(r.Body)
@@ -279,44 +249,11 @@ func (cli *SlackClient) deleteMessage(ts, channel string) ([]byte, error) {
 }
 
 func httpRequestWithRetry(url string, params url.Values, n int) (*http.Response, error) {
-	res, err := Retry(
-		n,
-		func(n int, res interface{}) time.Duration {
-			r, ok := res.(*http.Response)
-			exponential := time.Duration(n) * time.Duration(n) * time.Second
-			if !ok {
-				return exponential
-			}
-			h := r.Header
-			ts := h.Get("Retry-After")
-			if ts == "" {
-				return exponential
-			}
-			t, e := strconv.Atoi(ts)
-			if e != nil {
-				return exponential
-			}
-
-			return time.Duration(t) * time.Second
-		},
-		func() (interface{}, error) {
+	req := SlackRetryAble{
+		N: n,
+		HttpFunc: func() (*http.Response, error) {
 			return http.PostForm(url, params)
 		},
-		func(res interface{}) bool {
-			r, ok := res.(*http.Response)
-			if !ok {
-				return true
-			}
-			return r.StatusCode == http.StatusTooManyRequests
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", n))
 	}
-	r, ok := res.(*http.Response)
-	if !ok {
-		return nil, fmt.Errorf("Result cannot parse to http response. result: %+v", res)
-	}
-	return r, nil
-
+	return req.Request()
 }
