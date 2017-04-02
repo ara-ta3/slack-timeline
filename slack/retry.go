@@ -69,14 +69,12 @@ func (retry *SlackRetryAble) request(httpFn func() (*http.Response, error)) (*ht
 }
 
 func (r *SlackRetryAble) GetRequest(url string) (*http.Response, error) {
-	r.logger.Printf("Get Request to %+v\n", url)
 	return r.request(func() (*http.Response, error) {
 		return http.Get(url)
 	})
 }
 
 func (r *SlackRetryAble) PostReqest(url string, params url.Values) (*http.Response, error) {
-	r.logger.Printf("Post Request to %+v\n", url)
 	return r.request(func() (*http.Response, error) {
 		return http.PostForm(url, params)
 	})
