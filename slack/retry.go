@@ -2,7 +2,9 @@ package slack
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -10,36 +12,42 @@ import (
 )
 
 type SlackRetryAble struct {
-	N        int
-	HttpFunc func() (*http.Response, error)
+	N      int
+	logger *log.Logger
 }
 
 var exponentialBackOff = func(n int) time.Duration {
 	return time.Duration(n) * time.Duration(n) * time.Second
 }
 
-func (r *SlackRetryAble) Request() (*http.Response, error) {
+func (retry *SlackRetryAble) request(httpFn func() (*http.Response, error)) (*http.Response, error) {
 	res, err := Retry(
-		r.N,
+		retry.N,
 		func(n int, result interface{}) time.Duration {
+			defaultSec := exponentialBackOff(n)
 			r, ok := result.(*http.Response)
 			if !ok {
-				return exponentialBackOff(n)
+				retry.logger.Printf("cannot cast response %+v. waiting %+v\n", result, defaultSec)
+				return defaultSec
 			}
 			h := r.Header
 			ts := h.Get("Retry-After")
 			if ts == "" {
-				return exponentialBackOff(n)
+				retry.logger.Printf("cannot find time string from header %+v waiting %+v\n", r.Header, defaultSec)
+				return defaultSec
 			}
 			t, e := strconv.Atoi(ts)
 			if e != nil {
-				return exponentialBackOff(n)
+				retry.logger.Printf("cannot parse time string %+v waiting %+v\n", t, defaultSec)
+				return defaultSec
 			}
 
-			return time.Duration(t) * time.Second
+			sec := time.Duration(t+1) * time.Second
+			retry.logger.Printf("Response was too many request. waiting %+v\n", sec)
+			return sec
 		},
 		func() (interface{}, error) {
-			return r.HttpFunc()
+			return httpFn()
 		},
 		func(res interface{}) bool {
 			r, ok := res.(*http.Response)
@@ -50,13 +58,28 @@ func (r *SlackRetryAble) Request() (*http.Response, error) {
 		},
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", r.N))
+		return nil, errors.Wrap(err, fmt.Sprintf("%d times tried but failed.", retry.N))
 	}
 	response, ok := res.(*http.Response)
 	if !ok {
 		return nil, fmt.Errorf("Failed to cast to http response. result: %+v", res)
 	}
 	return response, nil
+
+}
+
+func (r *SlackRetryAble) GetRequest(url string) (*http.Response, error) {
+	r.logger.Printf("Get Request to %+v\n", url)
+	return r.request(func() (*http.Response, error) {
+		return http.Get(url)
+	})
+}
+
+func (r *SlackRetryAble) PostReqest(url string, params url.Values) (*http.Response, error) {
+	r.logger.Printf("Post Request to %+v\n", url)
+	return r.request(func() (*http.Response, error) {
+		return http.PostForm(url, params)
+	})
 }
 
 func Retry(

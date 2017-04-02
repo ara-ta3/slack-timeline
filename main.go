@@ -29,7 +29,7 @@ func main() {
 		logger.Fatalln(e)
 	}
 	defer db.Close()
-	slackClient := slack.SlackClient{Token: config.SlackAPIToken}
+	slackClient := slack.NewSlackClient(config.SlackAPIToken, logger)
 	worker := slack.NewSlackTimelineWorker(slackClient)
 	userRepository := slack.NewUserRepository(slackClient)
 	messageRepository := slack.NewMessageRepository(config.TimelineChannelID, slackClient, *db)

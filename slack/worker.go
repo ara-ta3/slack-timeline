@@ -72,21 +72,7 @@ func (w SlackTimelineWorker) Polling(
 		prev = make([]byte, 0)
 		message := SlackMessage{}
 		errOnMessage := json.Unmarshal(msg, &message)
-
 		if errOnMessage != nil {
-			event := channelCreated{}
-			errOnEvent := json.Unmarshal(msg, &event)
-			if errOnEvent != nil {
-				continue
-			}
-			con.Close()
-			con, e = w.rtmClient.ConnectToRTM()
-			if e != nil {
-				err := errors.Wrap(e, "failed to connecting to slack rtm")
-				errorChan <- err
-				return
-			}
-			defer con.Close()
 			continue
 		}
 
