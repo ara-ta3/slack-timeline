@@ -17,15 +17,11 @@ type SlackRetryAble struct {
 	logger *log.Logger
 }
 
-var exponentialBackOff = func(n int) time.Duration {
-	return time.Duration(n) * time.Duration(n) * time.Second
-}
-
 func (retryAble *SlackRetryAble) request(httpFn func() (*http.Response, error)) (*http.Response, error) {
 	res, err := retry.Retry(
 		retryAble.N,
 		func(n int, result interface{}) time.Duration {
-			defaultSec := exponentialBackOff(n)
+			defaultSec := retry.ExponentialBackOff(n, result)
 			r, ok := result.(*http.Response)
 			if !ok {
 				retryAble.logger.Printf("cannot cast response %+v. waiting %+v\n", result, defaultSec)
@@ -51,10 +47,6 @@ func (retryAble *SlackRetryAble) request(httpFn func() (*http.Response, error)) 
 			r, err := httpFn()
 			if err != nil {
 				return r, err
-			}
-			r, ok := r.(*http.Response)
-			if !ok {
-				return r, fmt.Errorf("Response is not http.Response. Response: %+v", r)
 			}
 			if r.StatusCode == http.StatusTooManyRequests {
 				return r, fmt.Errorf("Response code was too many requests.")
