@@ -1,6 +1,8 @@
-hash: a20d9f050bb6279ff4aebdb81a7f2fe23ab354d445ab5ca62bd9ac3f625ad4d3
-updated: 2017-03-20T14:31:37.492917641+09:00
+hash: 84b578e3e552e3d264dfa804a8793a97f02bf420b496c1ac418d2204837839ee
+updated: 2017-05-16T21:49:54.741962584+09:00
 imports:
+- name: github.com/ara-ta3/retry
+  version: 8f9ab8d6b42520fa1eb8ad4c1ddc98909dff1df5
 - name: github.com/golang/snappy
   version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
 - name: github.com/patrickmn/go-cache
