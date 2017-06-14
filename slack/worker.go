@@ -49,6 +49,7 @@ func (w SlackTimelineWorker) Polling(
 	messageChan, deletedMessageChan chan *timeline.Message,
 	errorChan chan error,
 	endChan chan bool,
+	userCacheClearChan chan interface{},
 ) {
 	con, e := w.rtmClient.ConnectToRTM()
 	if e != nil {
@@ -95,6 +96,8 @@ func (w SlackTimelineWorker) Polling(
 			d.Message.ChannelID = d.ChannelID
 			m := d.Message.ToInternal()
 			deletedMessageChan <- &m
+		} else if message.Text == "timeline clear" {
+			userCacheClearChan <- true
 		}
 	}
 }

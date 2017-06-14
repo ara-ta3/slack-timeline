@@ -11,6 +11,7 @@ type TimelineWorker interface {
 		messageChan, deletedMessageChan chan *Message,
 		errorChan chan error,
 		endChan chan bool,
+		userCacheClearChan chan interface{},
 	)
 }
 
@@ -62,12 +63,14 @@ func (s *TimelineService) Run() error {
 	deletedMessageChan := make(chan *Message)
 	errorChan := make(chan error)
 	endChan := make(chan bool)
+	userCacheClearChan := make(chan interface{})
 
 	go s.TimelineWorker.Polling(
 		messageChan,
 		deletedMessageChan,
 		errorChan,
 		endChan,
+		userCacheClearChan,
 	)
 	for {
 		select {
@@ -86,6 +89,9 @@ func (s *TimelineService) Run() error {
 			return e
 		case _ = <-endChan:
 			return nil
+		case _ = <-userCacheClearChan:
+			s.logger.Printf("User Cache will be cleared")
+			s.UserRepository.Clear()
 		default:
 			break
 		}

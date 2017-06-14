@@ -5,6 +5,7 @@ type TimelineWorkerMock struct {
 		messageChan, deletedMessageChan chan *Message,
 		errorChan chan error,
 		endChan chan bool,
+		userCacheClearChan chan interface{},
 	)
 }
 
@@ -12,6 +13,7 @@ func (w TimelineWorkerMock) Polling(
 	messageChan, deletedMessageChan chan *Message,
 	errorChan chan error,
 	endChan chan bool,
+	userCacheClearChan chan interface{},
 ) {
-	w.polling(messageChan, deletedMessageChan, errorChan, endChan)
+	w.polling(messageChan, deletedMessageChan, errorChan, endChan, userCacheClearChan)
 }
