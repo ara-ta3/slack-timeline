@@ -18,13 +18,13 @@ type TimelineWorker interface {
 }
 
 type UserRepository interface {
-	Get(userID string) (User, error)
+	Get(userID string) (*User, error)
 	GetAll() ([]User, error)
 	Clear() error
 }
 
 type MessageRepository interface {
-	FindMessageInTimeline(m Message) (Message, error)
+	FindMessageInTimeline(m Message) (*Message, error)
 	Put(u User, m Message) error
 	Delete(m Message) error
 }
@@ -79,16 +79,16 @@ func (s *TimelineService) Run() error {
 		case msg := <-messageChan:
 			e := s.PutToTimeline(msg)
 			if e != nil {
-				errorChan <- e
+				return e
 			}
 		case d := <-deletedMessageChan:
 			e := s.DeleteFromTimeline(d)
 			if e != nil {
 				switch e.(type) {
 				case *MessageNotFoundError:
-					continue
+					// do nothing
 				default:
-					errorChan <- e
+					return e
 				}
 			}
 		case e := <-errorChan:
@@ -98,10 +98,9 @@ func (s *TimelineService) Run() error {
 		case _ = <-userCacheClearChan:
 			e := s.UserRepository.Clear()
 			if e != nil {
-				errorChan <- e
-			} else {
-				s.logger.Printf("User Cache was cleared")
+				return e
 			}
+			s.logger.Printf("User Cache was cleared")
 		default:
 			break
 		}
@@ -117,10 +116,13 @@ func (service *TimelineService) PutToTimeline(m *Message) error {
 	if e != nil {
 		return e
 	}
+	if u == nil {
+		return errors.New(fmt.Sprintf("user not found. id: %s", m.UserID))
+	}
 	t := service.IDReplacer.Replace(m.Text)
 	m.Text = t
 
-	e = service.MessageRepository.Put(u, *m)
+	e = service.MessageRepository.Put(*u, *m)
 	if e != nil {
 		return e
 	}
@@ -130,11 +132,15 @@ func (service *TimelineService) PutToTimeline(m *Message) error {
 func (service *TimelineService) DeleteFromTimeline(originMessage *Message) error {
 	m, e := service.MessageRepository.FindMessageInTimeline(*originMessage)
 	if e != nil {
+		return e
+
+	}
+	if m == nil {
 		return MessageNotFoundError{
 			Message: *originMessage,
 		}
 	}
-	e = service.MessageRepository.Delete(m)
+	e = service.MessageRepository.Delete(*m)
 	if e != nil {
 		e = errors.Wrap(e, "failed to delete message in timeline")
 		return e

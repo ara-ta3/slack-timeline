@@ -1,18 +1,15 @@
 package timeline
 
-import "fmt"
-
 type MessageRepositoryOnMemory struct {
 	data map[string]Message
 }
 
-func (r MessageRepositoryOnMemory) FindMessageInTimeline(m Message) (Message, error) {
-	// TODO ホントはm自体ではない
+func (r MessageRepositoryOnMemory) FindMessageInTimeline(m Message) (*Message, error) {
 	_, found := r.data[m.ToKey()]
 	if found {
-		return m, nil
+		return &m, nil
 	}
-	return Message{}, fmt.Errorf("not found")
+	return nil, nil
 }
 
 func (r MessageRepositoryOnMemory) Put(u User, m Message) error {
