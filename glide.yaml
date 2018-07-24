@@ -12,6 +12,7 @@ import:
   version: ^0.8.0
 - package: github.com/ara-ta3/retry
   version: ^0.0
+- package: github.com/getsentry/raven-go
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.1.4

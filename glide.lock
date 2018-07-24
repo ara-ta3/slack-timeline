@@ -1,12 +1,14 @@
-hash: 84b578e3e552e3d264dfa804a8793a97f02bf420b496c1ac418d2204837839ee
-updated: 2017-05-16T21:49:54.741962584+09:00
+hash: 67ca38e82b248806c4ab45405a861a2f52b28d3a9d637a58d91883bc5522a21f
+updated: 2018-07-24T21:17:20.951002771+09:00
 imports:
 - name: github.com/ara-ta3/retry
   version: 8f9ab8d6b42520fa1eb8ad4c1ddc98909dff1df5
+- name: github.com/getsentry/raven-go
+  version: ed7bcb39ff10f39ab08e317ce16df282845852fa
 - name: github.com/golang/snappy
   version: d9eb7a3d35ec988b8585d4a0068e462c27d28380
 - name: github.com/patrickmn/go-cache
-  version: 1881a9bccb818787f68c52bfba648c6cf34c34fa
+  version: a3647f8e31d79543b2d0f0ae2fe5c379d72cedc0
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/syndtr/goleveldb
@@ -38,6 +40,6 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  version: f35b8ab0b5a2cef36673838d662e249dd9c94686
   subpackages:
   - assert
