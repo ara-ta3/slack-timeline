@@ -34,22 +34,24 @@ func (r UserRepositoryOnSlack) GetAll() ([]timeline.User, error) {
 	return users, nil
 }
 
-func (r UserRepositoryOnSlack) Get(userID string) (timeline.User, error) {
+func (r UserRepositoryOnSlack) Get(userID string) (*timeline.User, error) {
 	u, found := r.cache.Get(userID)
 	ret, ok := u.(User)
 	if found && ok {
-		return ret.ToInternal(), nil
+		user := ret.ToInternal()
+		return &user, nil
 	}
 	r.cache.Delete(userID)
 
 	uu, err := r.SlackClient.getUser(userID)
 
 	if err != nil {
-		return timeline.User{}, err
+		return &timeline.User{}, err
 	}
 
 	r.cache.Set(userID, uu, cache.NoExpiration)
-	return uu.ToInternal(), nil
+	user := uu.ToInternal()
+	return &user, nil
 }
 
 func (r UserRepositoryOnSlack) Clear() error {
