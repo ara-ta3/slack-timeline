@@ -21,18 +21,21 @@ type MessageRepositoryOnSlack struct {
 	db                *leveldb.DB
 }
 
-func (r MessageRepositoryOnSlack) FindMessageInTimeline(message timeline.Message) (timeline.Message, error) {
+func (r MessageRepositoryOnSlack) FindMessageInTimeline(message timeline.Message) (*timeline.Message, error) {
 	key := message.ToKey()
 	data, err := r.db.Get([]byte(key), nil)
-	if err != nil {
-		return timeline.Message{}, err
+	if err == leveldb.ErrNotFound {
+		return nil, nil
+	} else if err != nil {
+		return &timeline.Message{}, err
 	}
 	m := SlackMessage{}
 	err = json.Unmarshal(data, &m)
 	if err != nil {
-		return timeline.Message{}, err
+		return &timeline.Message{}, err
 	}
-	return m.ToInternal(), nil
+	msg := m.ToInternal()
+	return &msg, nil
 }
 
 func (r MessageRepositoryOnSlack) Put(u timeline.User, m timeline.Message) error {

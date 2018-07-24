@@ -151,6 +151,7 @@ func TestTimelineServiceDeleteFromTimelineFromWorker(t *testing.T) {
 		Text:      "hogefuga",
 		ChannelID: "Cchannel",
 		TimeStamp: "ts",
+		UserID:    "userid",
 	}
 	polling := func(
 		messageChan, deletedMessageChan chan *Message,
@@ -164,7 +165,9 @@ func TestTimelineServiceDeleteFromTimelineFromWorker(t *testing.T) {
 	}
 	worker := TimelineWorkerMock{polling: polling}
 	s := NewServiceForTest(worker, userRepository, messageRepository, "timelineChannelID", nil)
-	s.Run()
-	_, found := messageRepository.data[m.ToKey()]
-	assert.False(t, found)
+	e := s.Run()
+	if assert.NoError(t, e) {
+		_, found := messageRepository.data[m.ToKey()]
+		assert.False(t, found)
+	}
 }

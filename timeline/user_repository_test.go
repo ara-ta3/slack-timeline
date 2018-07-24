@@ -1,17 +1,15 @@
 package timeline
 
-import "fmt"
-
 type UserRepositoryOnMemory struct {
 	data map[string]User
 }
 
-func (r UserRepositoryOnMemory) Get(userID string) (User, error) {
+func (r UserRepositoryOnMemory) Get(userID string) (*User, error) {
 	u, found := r.data[userID]
 	if found {
-		return u, nil
+		return &u, nil
 	}
-	return User{}, fmt.Errorf("not found")
+	return nil, nil
 }
 
 func (r UserRepositoryOnMemory) GetAll() ([]User, error) {

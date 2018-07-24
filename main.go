@@ -47,11 +47,11 @@ func main() {
 	)
 
 	if e != nil {
-		log.Fatalf("%+v", e)
+		log.Fatalf("%+v\n", e)
 	}
 
 	err := service.Run()
 	if err != nil {
-		log.Fatalf("%+v", err)
+		log.Fatalf("%+v\n", err)
 	}
 }
