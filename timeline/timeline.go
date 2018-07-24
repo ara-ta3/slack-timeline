@@ -3,6 +3,8 @@ package timeline
 import (
 	"log"
 
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
@@ -77,21 +79,29 @@ func (s *TimelineService) Run() error {
 		case msg := <-messageChan:
 			e := s.PutToTimeline(msg)
 			if e != nil {
-				s.logger.Printf("%+v\n", e)
+				errorChan <- e
 			}
 		case d := <-deletedMessageChan:
 			e := s.DeleteFromTimeline(d)
 			if e != nil {
-				s.logger.Printf("%+v\n", d)
-				s.logger.Printf("%+v\n", e)
+				switch e.(type) {
+				case *MessageNotFoundError:
+					continue
+				default:
+					errorChan <- e
+				}
 			}
 		case e := <-errorChan:
 			return e
 		case _ = <-endChan:
 			return nil
 		case _ = <-userCacheClearChan:
-			s.logger.Printf("User Cache will be cleared")
-			s.UserRepository.Clear()
+			e := s.UserRepository.Clear()
+			if e != nil {
+				errorChan <- e
+			} else {
+				s.logger.Printf("User Cache was cleared")
+			}
 		default:
 			break
 		}
@@ -101,7 +111,6 @@ func (s *TimelineService) Run() error {
 
 func (service *TimelineService) PutToTimeline(m *Message) error {
 	if !service.MessageValidator.IsTargetMessage(m) {
-		service.logger.Printf("%+v\n", m)
 		return nil
 	}
 	u, e := service.UserRepository.Get(m.UserID)
@@ -121,8 +130,9 @@ func (service *TimelineService) PutToTimeline(m *Message) error {
 func (service *TimelineService) DeleteFromTimeline(originMessage *Message) error {
 	m, e := service.MessageRepository.FindMessageInTimeline(*originMessage)
 	if e != nil {
-		e = errors.Wrap(e, "failed to find message in timeline")
-		return e
+		return MessageNotFoundError{
+			Message: *originMessage,
+		}
 	}
 	e = service.MessageRepository.Delete(m)
 	if e != nil {
@@ -154,4 +164,12 @@ func contains(s []string, e string) bool {
 
 func isPublic(channelID string) bool {
 	return channelID[0:1] == "C"
+}
+
+type MessageNotFoundError struct {
+	Message Message
+}
+
+func (e MessageNotFoundError) Error() string {
+	return fmt.Sprintf("key of %s is not found\n", e.Message.ToKey())
 }
