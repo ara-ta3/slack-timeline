@@ -13,6 +13,8 @@ import:
 - package: github.com/ara-ta3/retry
   version: ^0.0
 - package: github.com/getsentry/raven-go
+- package: github.com/certifi/gocertifi
+  version: ~2018.1.18
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.1.4

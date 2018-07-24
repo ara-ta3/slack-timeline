@@ -1,8 +1,10 @@
-hash: 67ca38e82b248806c4ab45405a861a2f52b28d3a9d637a58d91883bc5522a21f
-updated: 2018-07-24T21:17:20.951002771+09:00
+hash: 36682e1f656969f8e306291413846903985d59a51ab206f57e714c261fabaa1f
+updated: 2018-07-24T21:40:22.58361716+09:00
 imports:
 - name: github.com/ara-ta3/retry
   version: 8f9ab8d6b42520fa1eb8ad4c1ddc98909dff1df5
+- name: github.com/certifi/gocertifi
+  version: deb3ae2ef2610fde3330947281941c562861188b
 - name: github.com/getsentry/raven-go
   version: ed7bcb39ff10f39ab08e317ce16df282845852fa
 - name: github.com/golang/snappy
