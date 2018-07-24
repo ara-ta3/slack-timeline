@@ -9,6 +9,11 @@ type Config struct {
 	SlackAPIToken       string   `json:"slackApiToken"`
 	TimelineChannelID   string   `json:"timelineChannelID"`
 	BlackListChannelIDs []string `json:"blackListChannelIDs"`
+	Sentry              sentry   `json:"sentry"`
+}
+
+type sentry struct {
+	DSN *string `json:"dsn"`
 }
 
 func ReadConfig(path string) (*Config, error) {

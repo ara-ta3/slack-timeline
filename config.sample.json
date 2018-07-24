@@ -1,5 +1,8 @@
 {
 	"slackApiToken": "",
 	"timelineChannelID": "",
-	"blackListChannelIDs": []
+	"blackListChannelIDs": [],
+	"sentry": {
+		"dsn": null
+	}
 }
