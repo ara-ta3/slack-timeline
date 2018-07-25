@@ -85,7 +85,7 @@ func (s *TimelineService) Run() error {
 			e := s.DeleteFromTimeline(d)
 			if e != nil {
 				switch e.(type) {
-				case *MessageNotFoundError:
+				case MessageNotFoundError:
 					// do nothing
 				default:
 					return e
