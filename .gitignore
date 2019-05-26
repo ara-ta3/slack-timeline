@@ -3,3 +3,4 @@ config.json
 db
 *.swp
 vendor
+slack-timeline
