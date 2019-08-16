@@ -11,7 +11,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.8.1
-	github.com/stretchr/testify v1.3.0
+	github.com/stretchr/testify v1.4.0
 	github.com/syndtr/goleveldb v0.0.0-20161227110519-23851d93a229
 	golang.org/x/net v0.0.0-20161229225711-8fd7f2595553
 	gopkg.in/yaml.v2 v2.2.2 // indirect
