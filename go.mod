@@ -10,7 +10,7 @@ require (
 	github.com/golang/snappy v0.0.0-20160529050041-d9eb7a3d35ec // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.0
 	github.com/stretchr/testify v1.3.0
 	github.com/syndtr/goleveldb v0.0.0-20161227110519-23851d93a229
 	golang.org/x/net v0.0.0-20161229225711-8fd7f2595553
